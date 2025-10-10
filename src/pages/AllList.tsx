@@ -32,6 +32,21 @@ import {
   faBicycle,
   faUmbrella,
   faGlasses,
+  faDesktop,
+  faBath,
+  faChild,
+  faDumbbell,
+  faBriefcaseMedical,
+  faGraduationCap,
+  faBriefcase,
+  faLeaf,
+  faStore,
+  faPlane,
+  faMobileAlt,
+  faGem,
+  faSeedling,
+  faGlobe,
+  faEllipsisH,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
@@ -82,6 +97,21 @@ const AllList = () => {
       bicycle: faBicycle,
       umbrella: faUmbrella,
       glasses: faGlasses,
+      desktop: faDesktop,
+      bath: faBath,
+      child: faChild,
+      dumbbell: faDumbbell,
+      'briefcase-medical': faBriefcaseMedical,
+      'graduation-cap': faGraduationCap,
+      briefcase: faBriefcase,
+      leaf: faLeaf,
+      store: faStore,
+      plane: faPlane,
+      'mobile-alt': faMobileAlt,
+      gem: faGem,
+      seedling: faSeedling,
+      globe: faGlobe,
+      'ellipsis-h': faEllipsisH,
     };
     return iconMap[iconName] || faFolder;
   };
