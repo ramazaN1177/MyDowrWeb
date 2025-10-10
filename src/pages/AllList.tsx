@@ -11,7 +11,27 @@ import {
   faTrash,
   faExclamationCircle,
   faTimes,
-  faImage,
+  faFolder,
+  faCouch,
+  faBed,
+  faUtensils,
+  faShirt,
+  faTv,
+  faBook,
+  faCar,
+  faHome,
+  faHeart,
+  faGift,
+  faStar,
+  faShoppingBag,
+  faCoffee,
+  faMusic,
+  faPalette,
+  faGamepad,
+  faCamera,
+  faBicycle,
+  faUmbrella,
+  faGlasses,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
@@ -37,6 +57,34 @@ const AllList = () => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { getDowries, deleteDowry, updateDowryStatus, getImage } = useDowry();
   const { categories, fetchCategories } = useCategory();
+
+  // Icon mapping for category icons
+  const getIconByName = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      folder: faFolder,
+      couch: faCouch,
+      bed: faBed,
+      utensils: faUtensils,
+      shirt: faShirt,
+      tv: faTv,
+      book: faBook,
+      car: faCar,
+      home: faHome,
+      heart: faHeart,
+      gift: faGift,
+      star: faStar,
+      'shopping-bag': faShoppingBag,
+      coffee: faCoffee,
+      music: faMusic,
+      palette: faPalette,
+      gamepad: faGamepad,
+      camera: faCamera,
+      bicycle: faBicycle,
+      umbrella: faUmbrella,
+      glasses: faGlasses,
+    };
+    return iconMap[iconName] || faFolder;
+  };
 
   const [items, setItems] = useState<DowryItem[]>([]);
   const [allItems, setAllItems] = useState<DowryItem[]>([]); // Tüm itemlar (istatistikler için)
@@ -270,7 +318,8 @@ const AllList = () => {
     const category = categories.find(cat => cat.id === categoryId);
     return {
       title: category?.title || 'Kategori',
-      color: category?.color || '#FFB300'
+      color: category?.color || '#FFB300',
+      icon: category?.icon || 'folder'
     };
   };
 
@@ -435,7 +484,7 @@ const AllList = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center flex-1">
                       {/* Resim */}
-                      <div className="w-12 h-12 rounded-lg border-2 mr-3 shadow-sm flex items-center justify-center" style={{ borderColor: '#FFB300', backgroundColor: '#FFF8E1' }}>
+                      <div className="w-12 h-12 rounded-lg border-2 mr-3 shadow-sm flex items-center justify-center" style={{ borderColor: categoryInfo.color, backgroundColor: '#FFF8E1' }}>
                         {(item.imageId || item.dowryImage) ? (
                           <button
                             onClick={() => openImageModal(item.imageId || item.dowryImage!)}
@@ -454,14 +503,16 @@ const AllList = () => {
                               }}
                             />
                             <FontAwesomeIcon 
-                              icon={faImage} 
-                              className="hidden text-gray-400 text-lg" 
+                              icon={getIconByName(categoryInfo.icon)} 
+                              className="hidden text-lg" 
+                              style={{ color: categoryInfo.color }}
                             />
                           </button>
                         ) : (
                           <FontAwesomeIcon 
-                            icon={faImage} 
-                            className="text-gray-400 text-lg" 
+                            icon={getIconByName(categoryInfo.icon)} 
+                            className="text-lg" 
+                            style={{ color: categoryInfo.color }}
                           />
                         )}
                       </div>
