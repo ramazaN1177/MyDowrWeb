@@ -1,0 +1,600 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowLeft,
+  faPlus,
+  faSearch,
+  faCube,
+  faTag,
+  faMapMarkerAlt,
+  faEdit,
+  faTrash,
+  faExclamationCircle,
+  faTimes,
+  faImage,
+} from '@fortawesome/free-solid-svg-icons';
+import { toast } from 'react-toastify';
+import { useAuth } from '../hooks/useAuth';
+import AddDowryModal from '../components/AddDowryModal';
+import UpdateDowryModal from '../components/UpdateDowryModal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useDowry } from '../hooks/useDowry';
+import { useCategory } from '../hooks/useCategory';
+
+interface DowryItem {
+  _id?: string;
+  name: string;
+  description: string;
+  Category: string;
+  dowryPrice: number;
+  imageId?: string;
+  dowryImage?: string;
+  dowryLocation?: string;
+  status: 'purchased' | 'not_purchased';
+}
+
+const Category = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const categoryId = searchParams.get('id') || '';
+  const categoryTitle = searchParams.get('title') || 'Kategori';
+  const categoryColor = searchParams.get('color') || '#FFB300';
+
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { getDowries, deleteDowry, updateDowryStatus, getImage } = useDowry();
+  const { categories, fetchCategories } = useCategory();
+
+  const [items, setItems] = useState<DowryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
+
+  // Modal states
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [selectedItemForUpdate, setSelectedItemForUpdate] = useState<DowryItem | null>(null);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<DowryItem | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+
+  useEffect(() => {
+    // Auth yüklenirken bekle
+    if (authLoading) {
+      return;
+    }
+    
+    if (categoryId && isAuthenticated) {
+      loadCategoryItems(searchText);
+      fetchCategories();
+    } else if (!isAuthenticated) {
+      setError('Oturum açmanız gerekiyor');
+      setLoading(false);
+    }
+  }, [categoryId, isAuthenticated, authLoading, searchText]);
+
+  // ESC tuşu ile modal kapatma
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && imageModalVisible) {
+        closeImageModal();
+      }
+    };
+
+    if (imageModalVisible) {
+      document.addEventListener('keydown', handleKeyDown);
+      // Modal açıkken body scroll'unu engelle
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [imageModalVisible]);
+
+  // Load images
+  useEffect(() => {
+    if (items.length > 0) {
+      items.forEach((item) => {
+        // Hem imageId hem de dowryImage alanlarını kontrol et
+        const imageId = item.imageId || item.dowryImage;
+        if (imageId && !imageCache[imageId]) {
+          loadImageAsBase64(imageId);
+        }
+      });
+    }
+  }, [items]);
+
+  const loadCategoryItems = async (searchQuery: string = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!isAuthenticated) {
+        setError('Oturum açmanız gerekiyor');
+        return;
+      }
+
+      const response = await getDowries({
+        category: categoryId,
+        search: searchQuery,
+        page: 1,
+        limit: 50,
+      });
+
+      if (response) {
+        setItems(response);
+      } else {
+        setError('Eşyalar yüklenirken bir hata oluştu');
+      }
+    } catch (error) {
+      setError('Eşyalar yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditItem = (item: DowryItem) => {
+    setSelectedItemForUpdate(item);
+    setUpdateModalVisible(true);
+  };
+
+  const handleDeleteItem = (item: DowryItem) => {
+    setItemToDelete(item);
+    setDeleteDialogVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete?._id) return;
+
+    try {
+      await deleteDowry(itemToDelete._id);
+      setItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
+      toast.success('Eşya başarıyla silindi');
+      setDeleteDialogVisible(false);
+      setItemToDelete(null);
+    } catch (error) {
+      toast.error('Eşya silinirken bir hata oluştu');
+    }
+  };
+
+  const handleStatusChange = async (item: DowryItem, newStatus: boolean) => {
+    try {
+      if (!item._id) return;
+
+      const status: 'purchased' | 'not_purchased' = newStatus ? 'purchased' : 'not_purchased';
+      const oldStatus = item.status;
+
+      // Optimistic update
+      setItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
+      );
+
+      const success = await updateDowryStatus(item._id, status);
+
+      if (!success) {
+        // Revert on failure
+        setItems((prevItems) =>
+          prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+        );
+      }
+    } catch (error) {
+      const oldStatus = item.status;
+      setItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+      );
+    }
+  };
+
+  const handleModalClose = () => {
+    setAddModalVisible(false);
+    setUpdateModalVisible(false);
+    setSelectedItemForUpdate(null);
+  };
+
+  const handleModalSuccess = () => {
+    loadCategoryItems(searchText);
+  };
+
+  const openImageModal = async (imageId: string) => {
+    const base64Image = await loadImageAsBase64(imageId);
+    if (base64Image) {
+      setSelectedImage(base64Image);
+      setImageModalVisible(true);
+    }
+  };
+
+  const closeImageModal = () => {
+    setImageModalVisible(false);
+    setSelectedImage(null);
+  };
+
+  const loadImageAsBase64 = async (imageId: string): Promise<string | null> => {
+    try {
+      if (imageCache[imageId]) {
+        return imageCache[imageId];
+      }
+
+      const base64 = await getImage(imageId);
+      if (base64) {
+        setImageCache((prev) => ({
+          ...prev,
+          [imageId]: base64,
+        }));
+        return base64;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const totalItems = items.length;
+  const purchasedItems = items.filter((item) => item.status === 'purchased').length;
+  const notPurchasedItems = items.filter((item) => item.status === 'not_purchased').length;
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: '#FFF8E1' }}>
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-6 py-5 shadow-xl"
+        style={{ backgroundColor: categoryColor }}
+      >
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-white/20 rounded-full transition-colors"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} className="text-white text-xl" />
+        </button>
+        <h1 className="text-2xl font-bold text-white flex-1 text-center drop-shadow-md">
+          {categoryTitle}
+        </h1>
+        <button
+          onClick={() => setAddModalVisible(true)}
+          className="p-2 hover:bg-white/20 rounded-full transition-colors"
+        >
+          <FontAwesomeIcon icon={faPlus} className="text-white text-xl" />
+        </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="px-6 mt-5">
+        <div
+          className="bg-white rounded-xl p-3 shadow-lg flex items-center border-2"
+          style={{ borderColor: '#FFB300' }}
+        >
+          <FontAwesomeIcon icon={faSearch} className="text-gray-500 mr-3" />
+          <input
+            type="text"
+            placeholder="Eşya ara"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="flex-1 outline-none text-base"
+            style={{ color: '#8B4513' }}
+          />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
+            style={{ borderColor: '#FFB300' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+              {totalItems}
+            </p>
+            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+              Toplam Eşya
+            </p>
+          </div>
+          <div
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
+            style={{ borderColor: '#FFB300' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+              {purchasedItems}
+            </p>
+            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+              Alınan
+            </p>
+          </div>
+          <div
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
+            style={{ borderColor: '#FFB300' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+              {notPurchasedItems}
+            </p>
+            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+              Alınmayan
+            </p>
+          </div>
+        </div>
+
+        {/* Items List */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-amber-500"></div>
+            <p className="mt-4 text-lg font-bold" style={{ color: '#8B4513' }}>
+              Eşyalar yükleniyor...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <FontAwesomeIcon
+              icon={faExclamationCircle}
+              className="text-6xl mb-4"
+              style={{ color: '#8B4513' }}
+            />
+            <p className="text-lg font-bold text-center mb-8" style={{ color: '#8B4513' }}>
+              {error}
+            </p>
+            <button
+              onClick={() => loadCategoryItems(searchText)}
+              className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
+              style={{ backgroundColor: '#FFB300' }}
+            >
+              Tekrar Dene
+            </button>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <FontAwesomeIcon icon={faCube} className="text-6xl text-gray-300 mb-4" />
+            <p className="text-lg font-bold text-center mb-8" style={{ color: '#8B4513' }}>
+              Bu kategoride henüz eşya bulunmuyor
+            </p>
+            <button
+              onClick={() => setAddModalVisible(true)}
+              className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
+              style={{ backgroundColor: '#FFB300' }}
+            >
+              İlk Eşyayı Ekle
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {items.map((item) => (
+              <div
+                key={item._id || item.name}
+                className="bg-white rounded-2xl p-5 border-2 shadow-md"
+                style={{ borderColor: '#FFB300' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center flex-1">
+                    {/* Resim veya placeholder ikon */}
+                    <div className="w-12 h-12 rounded-lg border-2 mr-3 shadow-sm flex items-center justify-center" style={{ borderColor: '#FFB300', backgroundColor: '#FFF8E1' }}>
+                      {(item.imageId || item.dowryImage) ? (
+                        <button
+                          onClick={() => openImageModal(item.imageId || item.dowryImage!)}
+                          className="w-full h-full rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={
+                              imageCache[item.imageId || item.dowryImage!] ||
+                              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+                            }
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Resim yüklenemezse placeholder ikon göster
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <FontAwesomeIcon 
+                            icon={faImage} 
+                            className="hidden text-gray-400 text-lg" 
+                          />
+                        </button>
+                      ) : (
+                        <FontAwesomeIcon 
+                          icon={faImage} 
+                          className="text-gray-400 text-lg" 
+                        />
+                      )}
+                    </div>
+                    <h3 className="text-lg font-bold flex-1" style={{ color: '#8B4513' }}>
+                      {item.name}
+                    </h3>
+                  </div>
+                  {/* Modern Animated Switch */}
+                  <button
+                    onClick={() => handleStatusChange(item, item.status !== 'purchased')}
+                    className="relative flex items-center rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
+                    style={{
+                      width: '95px',
+                      height: '34px',
+                      backgroundColor: item.status === 'purchased' ? '#4CAF50' : '#8B4513',
+                    }}
+                  >
+                    {/* Switch Circle */}
+                    <div
+                      className="absolute w-7 h-7 bg-white rounded-full shadow-lg transition-all duration-300 ease-in-out"
+                      style={{
+                        left: item.status === 'purchased' ? 'calc(100% - 32px)' : '5px',
+                      }}
+                    />
+                    
+                    {/* Status Text */}
+                    <span 
+                      className="absolute text-[11px] font-bold text-white transition-all duration-300"
+                      style={{
+                        left: item.status === 'purchased' ? '10px' : 'auto',
+                        right: item.status === 'purchased' ? 'auto' : '10px',
+                      }}
+                    >
+                      {item.status === 'purchased' ? 'Alındı' : 'Alınmadı'}
+                    </span>
+                  </button>
+                </div>
+
+                <p className="text-sm mb-4 opacity-80" style={{ color: '#8B4513' }}>
+                  {item.description}
+                </p>
+
+                {/* Details */}
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center">
+                    <FontAwesomeIcon icon={faTag} className="text-gray-500 mr-2" />
+                    <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
+                      Fiyat: ₺{item.dowryPrice?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                  {item.dowryLocation && (
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-500 mr-2" />
+                      <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
+                        Konum: {item.dowryLocation}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleEditItem(item)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-white shadow-md"
+                    style={{ backgroundColor: '#FFB300' }}
+                  >
+                    <FontAwesomeIcon icon={faEdit} />
+                    <span>Düzenle</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(item)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-white shadow-md"
+                    style={{ backgroundColor: '#8B4513' }}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                    <span>Sil</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Image Modal */}
+      {imageModalVisible && selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={closeImageModal}
+          style={{
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideIn {
+              from { 
+                opacity: 0; 
+                transform: scale(0.95); 
+              }
+              to { 
+                opacity: 1; 
+                transform: scale(1); 
+              }
+            }
+          `}</style>
+          
+          <div 
+            className="relative w-full max-w-5xl max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              animation: 'slideIn 0.3s ease-out'
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={closeImageModal}
+              className="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-all duration-200 z-10"
+            >
+              <FontAwesomeIcon icon={faTimes} className="text-lg" />
+            </button>
+
+            {/* Image Container */}
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+              {/* Loading overlay */}
+              <div className="absolute inset-0 bg-gray-50 flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-gray-500 text-sm">Yükleniyor...</span>
+                </div>
+              </div>
+              
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="w-full h-full object-contain max-h-[85vh]"
+                onLoad={(e) => {
+                  // Resim yüklendiğinde loading overlay'i gizle
+                  e.currentTarget.parentElement?.querySelector('.absolute')?.classList.add('hidden');
+                }}
+                onError={(e) => {
+                  // Hata durumunda loading overlay'i gizle ve hata mesajı göster
+                  const overlay = e.currentTarget.parentElement?.querySelector('.absolute');
+                  if (overlay) {
+                    overlay.innerHTML = `
+                      <div class="flex flex-col items-center gap-3 text-red-500">
+                        <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="text-sm">Resim yüklenemedi</span>
+                      </div>
+                    `;
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Dowry Modal */}
+      <AddDowryModal
+        visible={addModalVisible}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        category={categoryId}
+        categories={categories}
+      />
+
+      {/* Update Dowry Modal */}
+      <UpdateDowryModal
+        visible={updateModalVisible}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        item={selectedItemForUpdate}
+        categories={categories}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Eşyayı Sil"
+        message="Bu eşyayı silmek istediğinizden emin misiniz?"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteDialogVisible(false);
+          setItemToDelete(null);
+        }}
+        confirmText="Sil"
+        cancelText="İptal"
+        variant="danger"
+      />
+    </div>
+  );
+};
+
+export default Category;
