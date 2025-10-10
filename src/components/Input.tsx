@@ -132,7 +132,7 @@ const Input: React.FC<InputProps> = ({
             style={{ color: iconColor }}
           >
             <FontAwesomeIcon 
-              icon={showPassword ? faEyeSlash : faEye} 
+              icon={showPassword ? faEye : faEyeSlash} 
             />
           </button>
         ) : rightIcon ? (
