@@ -59,6 +59,7 @@ const Category = () => {
   const [itemToDelete, setItemToDelete] = useState<DowryItem | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check for existing token on mount
   useEffect(() => {
@@ -163,9 +164,10 @@ const Category = () => {
   };
 
   const confirmDelete = async () => {
-    if (!itemToDelete?._id) return;
+    if (!itemToDelete?._id || isDeleting) return;
 
     try {
+      setIsDeleting(true);
       await deleteDowry(itemToDelete._id);
       setItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       toast.success('Eşya başarıyla silindi');
@@ -173,6 +175,8 @@ const Category = () => {
       setItemToDelete(null);
     } catch (error) {
       toast.error('Eşya silinirken bir hata oluştu');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -625,6 +629,7 @@ const Category = () => {
         confirmText="Sil"
         cancelText="İptal"
         variant="danger"
+        loading={isDeleting}
       />
     </div>
   );

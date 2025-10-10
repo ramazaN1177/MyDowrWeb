@@ -92,6 +92,7 @@ const Home = () => {
   const [showAddDowryModal, setShowAddDowryModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 9;
 
   // Check for existing token on mount
@@ -122,9 +123,10 @@ const Home = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!categoryToDelete) return;
+    if (!categoryToDelete || isDeleting) return;
 
     try {
+      setIsDeleting(true);
       // useCategory hook içinde window.confirm kullanmadan direkt silme yapalım
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/category/delete/${categoryToDelete.id}`, {
         method: 'DELETE',
@@ -147,6 +149,8 @@ const Home = () => {
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('Kategori silinirken hata oluştu');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -442,6 +446,7 @@ const Home = () => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         variant="danger"
+        loading={isDeleting}
       />
     </div>
   );

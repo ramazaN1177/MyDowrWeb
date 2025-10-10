@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   variant?: 'danger' | 'warning' | 'info';
+  loading?: boolean;
 }
 
 export default function ConfirmDialog({
@@ -21,6 +22,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   variant = 'warning',
+  loading = false,
 }: ConfirmDialogProps) {
   if (!visible) return null;
 
@@ -96,19 +98,28 @@ export default function ConfirmDialog({
         <div className="flex gap-3 px-6 py-4 border-t rounded-b-3xl" style={{ borderColor: '#FFE082', backgroundColor: '#FFF8E1' }}>
           <button
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border-2 bg-white font-bold text-base transition-all hover:bg-gray-50"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl border-2 bg-white font-bold text-base transition-all hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ borderColor: '#E0E0E0', color: '#8B4513' }}
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-3 rounded-xl font-bold text-white text-base shadow-lg transition-all hover:shadow-xl hover:scale-105"
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl font-bold text-white text-base shadow-lg transition-all hover:shadow-xl hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
             style={{
               background: `linear-gradient(90deg, ${colors.bg} 0%, ${colors.border} 100%)`,
             }}
           >
-            {confirmText}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Siliniyor...
+              </span>
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>
