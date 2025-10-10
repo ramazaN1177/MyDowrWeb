@@ -143,7 +143,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 7 * 1024 * 1024) { // 7 MB limit
         toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
         return;
       }
@@ -165,7 +165,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Validation - sadece kategori ve isim zorunlu
     if (!selectedCategory) {
       toast.error('Lütfen bir kategori seçiniz');
       return;
@@ -181,20 +181,14 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       return;
     }
 
-    if (!formData.description.trim()) {
-      toast.error('Eşya açıklaması gereklidir');
-      return;
-    }
-
-    if (!formData.dowryPrice.trim()) {
-      toast.error('Eşya fiyatı gereklidir');
-      return;
-    }
-
-    const price = parseFloat(formData.dowryPrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Geçerli bir fiyat giriniz');
-      return;
+    // Fiyat girildiyse kontrol et
+    let price = 0;
+    if (formData.dowryPrice.trim()) {
+      price = parseFloat(formData.dowryPrice);
+      if (isNaN(price) || price < 0) {
+        toast.error('Geçerli bir fiyat giriniz');
+        return;
+      }
     }
 
     try {
@@ -218,7 +212,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       // Create dowry data
       const dowryData = {
         name: formData.name.trim(),
-        description: formData.description.trim(),
+        description: formData.description.trim() || undefined,
         Category: apiCategory,
         dowryPrice: price,
         imageId: imageId || undefined,
@@ -424,7 +418,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
               />
 
               <Input
-                label="Fiyat (₺) *"
+                label="Fiyat (₺)"
                 type="number"
                 value={formData.dowryPrice}
                 onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
@@ -438,7 +432,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
 
             <div className="mb-4">
               <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                Açıklama *
+                Açıklama
               </label>
               <textarea
                 value={formData.description}
@@ -498,10 +492,10 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.name.trim() || !formData.description.trim() || !formData.dowryPrice.trim() || !selectedCategory}
+              disabled={loading || !formData.name.trim() || !selectedCategory}
               className="flex-1 py-3 rounded-xl font-bold text-white text-lg shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                background: loading || !formData.name.trim() || !formData.description.trim() || !formData.dowryPrice.trim() || !selectedCategory
+                background: loading || !formData.name.trim() || !selectedCategory
                   ? '#CCC'
                   : 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)',
               }}

@@ -111,7 +111,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Validation - sadece kategori ve isim zorunlu
     if (!selectedCategory) {
       toast.error('Kategori bilgisi bulunamadı');
       return;
@@ -122,28 +122,21 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
       return;
     }
 
-    if (!formData.description.trim()) {
-      toast.error('Eşya açıklaması gereklidir');
-      return;
-    }
-
-    if (!formData.dowryPrice.trim()) {
-      toast.error('Eşya fiyatı gereklidir');
-      return;
-    }
-
-    const price = parseFloat(formData.dowryPrice);
-    if (isNaN(price) || price <= 0) {
-      toast.error('Geçerli bir fiyat giriniz');
-      return;
+    // Fiyat girildiyse kontrol et
+    if (formData.dowryPrice.trim()) {
+      const price = parseFloat(formData.dowryPrice);
+      if (isNaN(price) || price < 0) {
+        toast.error('Geçerli bir fiyat giriniz');
+        return;
+      }
     }
 
     try {
       // Update dowry data - sadece güncellenebilir alanlar
       const dowryData: any = {
         name: formData.name.trim(),
-        description: formData.description.trim(),
-        dowryPrice: price,
+        description: formData.description.trim() || undefined,
+        dowryPrice: formData.dowryPrice.trim() ? parseFloat(formData.dowryPrice) : 0,
         dowryLocation: formData.dowryLocation.trim() || undefined,
         status: formData.status
       };
@@ -276,7 +269,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
                 />
 
                 <Input
-                  label="Fiyat (₺) *"
+                  label="Fiyat (₺)"
                   type="number"
                   value={formData.dowryPrice}
                   onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
@@ -290,7 +283,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
 
               <div className="mb-4">
                 <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                  Açıklama *
+                  Açıklama
                 </label>
                 <textarea
                   value={formData.description}
@@ -350,10 +343,10 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
               </button>
               <button
                 type="submit"
-                disabled={loading || !formData.name.trim() || !formData.description.trim() || !formData.dowryPrice.trim()}
+                disabled={loading || !formData.name.trim()}
                 className="flex-1 py-3 rounded-xl font-bold text-white text-lg shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{
-                  background: loading || !formData.name.trim() || !formData.description.trim() || !formData.dowryPrice.trim()
+                  background: loading || !formData.name.trim()
                     ? '#CCC'
                     : 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)',
                 }}

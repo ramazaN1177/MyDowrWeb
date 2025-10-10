@@ -398,16 +398,16 @@ export type DeleteApiCategoryDeleteByIdResponse = DeleteApiCategoryDeleteByIdRes
 export type PostApiDowryCreateData = {
     body: {
         name: string;
-        description: string;
+        description?: string;
         /**
          * Category ID reference
          */
         Category: string;
-        dowryPrice: number;
+        dowryPrice?: number;
         /**
          * Image ID from uploaded image
          */
-        imageId: string;
+        imageId?: string;
         dowryLocation?: string;
         status?: 'purchased' | 'not_purchased';
     };

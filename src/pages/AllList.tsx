@@ -39,9 +39,11 @@ const AllList = () => {
   const { categories, fetchCategories } = useCategory();
 
   const [items, setItems] = useState<DowryItem[]>([]);
+  const [allItems, setAllItems] = useState<DowryItem[]>([]); // Tüm itemlar (istatistikler için)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'purchased' | 'not_purchased'>('all');
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
 
   // Modal states
@@ -60,13 +62,20 @@ const AllList = () => {
     }
     
     if (isAuthenticated) {
-      loadAllItems(searchText);
+      loadAllItems();
       fetchCategories();
     } else if (!isAuthenticated) {
       setError('Oturum açmanız gerekiyor');
       setLoading(false);
     }
-  }, [isAuthenticated, authLoading, searchText]);
+  }, [isAuthenticated, authLoading]);
+
+  // Filtreleme ve arama için ayrı effect
+  useEffect(() => {
+    if (allItems.length > 0) {
+      filterItems();
+    }
+  }, [searchText, statusFilter, allItems]);
 
   // ESC tuşu ile modal kapatma
   useEffect(() => {
@@ -99,7 +108,7 @@ const AllList = () => {
     }
   }, [items]);
 
-  const loadAllItems = async (searchQuery: string = '') => {
+  const loadAllItems = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -109,14 +118,15 @@ const AllList = () => {
         return;
       }
 
+      // Tüm itemları çek (filtresiz)
       const response = await getDowries({
-        search: searchQuery,
         page: 1,
-        limit: 100,
+        limit: 1000,
       });
 
       if (response) {
-        setItems(response);
+        setAllItems(response);
+        setItems(response); // İlk yüklemede tümünü göster
       } else {
         setError('Eşyalar yüklenirken bir hata oluştu');
       }
@@ -125,6 +135,28 @@ const AllList = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterItems = () => {
+    let filtered = [...allItems];
+
+    // Arama filtresi
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.name.toLowerCase().includes(search) ||
+          item.description.toLowerCase().includes(search) ||
+          item.dowryLocation?.toLowerCase().includes(search)
+      );
+    }
+
+    // Durum filtresi
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((item) => item.status === statusFilter);
+    }
+
+    setItems(filtered);
   };
 
   const handleEditItem = (item: DowryItem) => {
@@ -143,6 +175,7 @@ const AllList = () => {
     try {
       setIsDeleting(true);
       await deleteDowry(itemToDelete._id);
+      setAllItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       setItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       toast.success('Eşya başarıyla silindi');
       setDeleteDialogVisible(false);
@@ -162,6 +195,9 @@ const AllList = () => {
       const oldStatus = item.status;
 
       // Optimistic update
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
+      );
       setItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
       );
@@ -170,12 +206,18 @@ const AllList = () => {
 
       if (!success) {
         // Revert on failure
+        setAllItems((prevItems) =>
+          prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+        );
         setItems((prevItems) =>
           prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
         );
       }
     } catch (error) {
       const oldStatus = item.status;
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+      );
       setItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
       );
@@ -188,7 +230,7 @@ const AllList = () => {
   };
 
   const handleModalSuccess = () => {
-    loadAllItems(searchText);
+    loadAllItems();
   };
 
   const openImageModal = async (imageId: string) => {
@@ -232,9 +274,9 @@ const AllList = () => {
     };
   };
 
-  const totalItems = items.length;
-  const purchasedItems = items.filter((item) => item.status === 'purchased').length;
-  const notPurchasedItems = items.filter((item) => item.status === 'not_purchased').length;
+  const totalItems = allItems.length;
+  const purchasedItems = allItems.filter((item) => item.status === 'purchased').length;
+  const notPurchasedItems = allItems.filter((item) => item.status === 'not_purchased').length;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FFF8E1' }}>
@@ -271,30 +313,54 @@ const AllList = () => {
       <div className="p-6">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-white p-4 rounded-2xl text-center shadow-lg border-2" style={{ borderColor: '#FFB300' }}>
+          <button
+            onClick={() => setStatusFilter('all')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: '#FFB300',
+              transform: statusFilter === 'all' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'all' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
+          >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {totalItems}
             </p>
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Toplam Eşya
             </p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl text-center shadow-lg border-2" style={{ borderColor: '#FFB300' }}>
+          </button>
+          <button
+            onClick={() => setStatusFilter('purchased')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: '#FFB300',
+              transform: statusFilter === 'purchased' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
+          >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {purchasedItems}
             </p>
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Alınan
             </p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl text-center shadow-lg border-2" style={{ borderColor: '#FFB300' }}>
+          </button>
+          <button
+            onClick={() => setStatusFilter('not_purchased')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: '#FFB300',
+              transform: statusFilter === 'not_purchased' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'not_purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
+          >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {notPurchasedItems}
             </p>
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Alınmayan
             </p>
-          </div>
+          </button>
         </div>
 
         {/* Items List */}
@@ -316,7 +382,7 @@ const AllList = () => {
               {error}
             </p>
             <button
-              onClick={() => loadAllItems(searchText)}
+              onClick={() => loadAllItems()}
               className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
               style={{ backgroundColor: '#FFB300' }}
             >
@@ -326,9 +392,23 @@ const AllList = () => {
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <FontAwesomeIcon icon={faCube} className="text-6xl text-gray-300 mb-4" />
-            <p className="text-lg font-bold text-center" style={{ color: '#8B4513' }}>
-              Henüz eşya bulunmuyor
+            <p className="text-lg font-bold text-center mb-8" style={{ color: '#8B4513' }}>
+              {allItems.length === 0
+                ? 'Henüz eşya bulunmuyor'
+                : 'Filtreye uygun eşya bulunamadı'}
             </p>
+            {allItems.length > 0 && (
+              <button
+                onClick={() => {
+                  setSearchText('');
+                  setStatusFilter('all');
+                }}
+                className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
+                style={{ backgroundColor: '#FFB300' }}
+              >
+                Filtreleri Temizle
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

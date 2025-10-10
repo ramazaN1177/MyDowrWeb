@@ -46,9 +46,11 @@ const Category = () => {
   const { categories, fetchCategories } = useCategory();
 
   const [items, setItems] = useState<DowryItem[]>([]);
+  const [allItems, setAllItems] = useState<DowryItem[]>([]); // Tüm itemlar (istatistikler için)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'purchased' | 'not_purchased'>('all');
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
 
   // Modal states
@@ -83,13 +85,20 @@ const Category = () => {
     }
     
     if (categoryId && isAuthenticated) {
-      loadCategoryItems(searchText);
+      loadCategoryItems();
       fetchCategories();
     } else if (!isAuthenticated) {
       setError('Oturum açmanız gerekiyor');
       setLoading(false);
     }
-  }, [categoryId, isAuthenticated, authLoading, searchText]);
+  }, [categoryId, isAuthenticated, authLoading]);
+
+  // Filtreleme ve arama için ayrı effect
+  useEffect(() => {
+    if (allItems.length > 0) {
+      filterItems();
+    }
+  }, [searchText, statusFilter, allItems]);
 
   // ESC tuşu ile modal kapatma
   useEffect(() => {
@@ -124,7 +133,7 @@ const Category = () => {
     }
   }, [items]);
 
-  const loadCategoryItems = async (searchQuery: string = '') => {
+  const loadCategoryItems = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -134,15 +143,16 @@ const Category = () => {
         return;
       }
 
+      // Tüm itemları çek (filtresiz)
       const response = await getDowries({
         category: categoryId,
-        search: searchQuery,
         page: 1,
-        limit: 50,
+        limit: 1000,
       });
 
       if (response) {
-        setItems(response);
+        setAllItems(response);
+        setItems(response); // İlk yüklemede tümünü göster
       } else {
         setError('Eşyalar yüklenirken bir hata oluştu');
       }
@@ -151,6 +161,28 @@ const Category = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterItems = () => {
+    let filtered = [...allItems];
+
+    // Arama filtresi
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.name.toLowerCase().includes(search) ||
+          item.description.toLowerCase().includes(search) ||
+          item.dowryLocation?.toLowerCase().includes(search)
+      );
+    }
+
+    // Durum filtresi
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((item) => item.status === statusFilter);
+    }
+
+    setItems(filtered);
   };
 
   const handleEditItem = (item: DowryItem) => {
@@ -169,8 +201,8 @@ const Category = () => {
     try {
       setIsDeleting(true);
       await deleteDowry(itemToDelete._id);
+      setAllItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       setItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
-      toast.success('Eşya başarıyla silindi');
       setDeleteDialogVisible(false);
       setItemToDelete(null);
     } catch (error) {
@@ -188,6 +220,9 @@ const Category = () => {
       const oldStatus = item.status;
 
       // Optimistic update
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
+      );
       setItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
       );
@@ -196,12 +231,18 @@ const Category = () => {
 
       if (!success) {
         // Revert on failure
+        setAllItems((prevItems) =>
+          prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+        );
         setItems((prevItems) =>
           prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
         );
       }
     } catch (error) {
       const oldStatus = item.status;
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+      );
       setItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
       );
@@ -215,7 +256,7 @@ const Category = () => {
   };
 
   const handleModalSuccess = () => {
-    loadCategoryItems(searchText);
+    loadCategoryItems();
   };
 
   const openImageModal = async (imageId: string) => {
@@ -251,9 +292,9 @@ const Category = () => {
     }
   };
 
-  const totalItems = items.length;
-  const purchasedItems = items.filter((item) => item.status === 'purchased').length;
-  const notPurchasedItems = items.filter((item) => item.status === 'not_purchased').length;
+  const totalItems = allItems.length;
+  const purchasedItems = allItems.filter((item) => item.status === 'purchased').length;
+  const notPurchasedItems = allItems.filter((item) => item.status === 'not_purchased').length;
 
   // Show loading while checking auth
   if (authLoading || (!user && localStorage.getItem('token'))) {
@@ -319,9 +360,14 @@ const Category = () => {
       <div className="p-6">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div
-            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
-            style={{ borderColor: '#FFB300' }}
+          <button
+            onClick={() => setStatusFilter('all')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: statusFilter === 'all' ? categoryColor : '#FFB300',
+              transform: statusFilter === 'all' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'all' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
           >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {totalItems}
@@ -329,10 +375,15 @@ const Category = () => {
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Toplam Eşya
             </p>
-          </div>
-          <div
-            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
-            style={{ borderColor: '#FFB300' }}
+          </button>
+          <button
+            onClick={() => setStatusFilter('purchased')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: statusFilter === 'purchased' ? categoryColor : '#FFB300',
+              transform: statusFilter === 'purchased' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
           >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {purchasedItems}
@@ -340,10 +391,15 @@ const Category = () => {
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Alınan
             </p>
-          </div>
-          <div
-            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2"
-            style={{ borderColor: '#FFB300' }}
+          </button>
+          <button
+            onClick={() => setStatusFilter('not_purchased')}
+            className="bg-white p-4 rounded-2xl text-center shadow-lg border-2 transition-all"
+            style={{ 
+              borderColor: statusFilter === 'not_purchased' ? categoryColor : '#FFB300',
+              transform: statusFilter === 'not_purchased' ? 'scale(1.05)' : 'scale(1)',
+              boxShadow: statusFilter === 'not_purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
+            }}
           >
             <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
               {notPurchasedItems}
@@ -351,7 +407,7 @@ const Category = () => {
             <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
               Alınmayan
             </p>
-          </div>
+          </button>
         </div>
 
         {/* Items List */}
@@ -373,7 +429,7 @@ const Category = () => {
               {error}
             </p>
             <button
-              onClick={() => loadCategoryItems(searchText)}
+              onClick={() => loadCategoryItems()}
               className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
               style={{ backgroundColor: '#FFB300' }}
             >
@@ -384,15 +440,30 @@ const Category = () => {
           <div className="flex flex-col items-center justify-center py-20">
             <FontAwesomeIcon icon={faCube} className="text-6xl text-gray-300 mb-4" />
             <p className="text-lg font-bold text-center mb-8" style={{ color: '#8B4513' }}>
-              Bu kategoride henüz eşya bulunmuyor
+              {allItems.length === 0
+                ? 'Bu kategoride henüz eşya bulunmuyor'
+                : 'Filtreye uygun eşya bulunamadı'}
             </p>
-            <button
-              onClick={() => setAddModalVisible(true)}
-              className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
-              style={{ backgroundColor: '#FFB300' }}
-            >
-              İlk Eşyayı Ekle
-            </button>
+            {allItems.length === 0 ? (
+              <button
+                onClick={() => setAddModalVisible(true)}
+                className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
+                style={{ backgroundColor: '#FFB300' }}
+              >
+                İlk Eşyayı Ekle
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchText('');
+                  setStatusFilter('all');
+                }}
+                className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
+                style={{ backgroundColor: '#FFB300' }}
+              >
+                Filtreleri Temizle
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

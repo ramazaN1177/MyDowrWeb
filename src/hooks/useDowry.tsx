@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 
 interface DowryData {
   name: string;
-  description: string;
+  description?: string;
   Category: string;
   dowryPrice: number;
   imageId?: string;
@@ -88,9 +88,6 @@ export function useDowry() {
       console.error('Error creating dowry:', err);
       const errorMsg = err instanceof Error ? err.message : 'Eşya eklenirken hata oluştu';
       setError(errorMsg);
-      if (!toast.isActive('create-dowry-error')) {
-        toast.error(errorMsg, { toastId: 'create-dowry-error' });
-      }
       throw err;
     } finally {
       setLoading(false);
@@ -162,7 +159,7 @@ export function useDowry() {
   };
 
   // Get dowries with filters
-  const getDowries = async (params?: { category?: string; search?: string; page?: number; limit?: number }) => {
+  const getDowries = async (params?: { category?: string; search?: string; page?: number; limit?: number; status?: string }) => {
     try {
       setLoading(true);
       setError(null);
@@ -172,6 +169,7 @@ export function useDowry() {
       if (params?.search) queryParams.append('search', params.search);
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.status) queryParams.append('status', params.status);
 
       const url = `${import.meta.env.VITE_API_BASE_URL}/api/dowry/get${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
