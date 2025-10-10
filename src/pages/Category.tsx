@@ -41,7 +41,7 @@ const Category = () => {
   const categoryTitle = searchParams.get('title') || 'Kategori';
   const categoryColor = searchParams.get('color') || '#FFB300';
 
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { getDowries, deleteDowry, updateDowryStatus, getImage } = useDowry();
   const { categories, fetchCategories } = useCategory();
 
@@ -59,6 +59,21 @@ const Category = () => {
   const [itemToDelete, setItemToDelete] = useState<DowryItem | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+    }
+  }, []);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user && !localStorage.getItem('token')) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     // Auth yüklenirken bekle
@@ -235,6 +250,24 @@ const Category = () => {
   const totalItems = items.length;
   const purchasedItems = items.filter((item) => item.status === 'purchased').length;
   const notPurchasedItems = items.filter((item) => item.status === 'not_purchased').length;
+
+  // Show loading while checking auth
+  if (authLoading || (!user && localStorage.getItem('token'))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8E1' }}>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-600"></div>
+          <p className="mt-4 text-lg font-bold" style={{ color: '#8B4513' }}>
+            Yükleniyor...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FFF8E1' }}>
