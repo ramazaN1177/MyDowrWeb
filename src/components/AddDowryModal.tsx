@@ -40,10 +40,14 @@ import {
   faTag,
   faWallet,
   faMapMarkerAlt,
+  faCrop,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
 import Input from './Input';
+import ReactCrop from 'react-image-crop';
+import type { Crop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 // Icon mapping for categories
 const ICON_MAP: Record<string, any> = {
@@ -112,6 +116,19 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   const [isCategoryLocked, setIsCategoryLocked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  
+  // Image cropping states
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState<string>('');
+  const [crop, setCrop] = useState<Crop>({
+    unit: '%',
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5
+  });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -153,13 +170,84 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
         return;
       }
 
-      setSelectedImage(file);
+      // Resmi kırpmak için modal aç
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempImageSrc(reader.result as string);
+        setShowCropModal(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Kırpılmış resmi canvas'a çiz ve File'a çevir
+  const getCroppedImage = async (): Promise<File | null> => {
+    if (!completedCrop || !imgRef.current) {
+      return null;
+    }
+
+    const canvas = document.createElement('canvas');
+    const image = imgRef.current;
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width,
+      completedCrop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
+        resolve(file);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  // Kırpma işlemini onayla
+  const handleCropComplete = async () => {
+    const croppedFile = await getCroppedImage();
+    if (croppedFile) {
+      setSelectedImage(croppedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(croppedFile);
+      setShowCropModal(false);
+      setTempImageSrc('');
+    } else {
+      toast.error('Resim kırpılamadı');
     }
+  };
+
+  // Kırpma işlemini iptal et
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setTempImageSrc('');
+    setCompletedCrop(null);
+    // Reset file inputs
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -589,6 +677,74 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Crop Modal */}
+      {showCropModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-5"
+          onClick={handleCropCancel}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center px-6 py-4 border-b" style={{ borderColor: '#FFB300' }}>
+              <h2 className="text-xl font-bold" style={{ color: '#8B4513' }}>
+                Resmi Kırp
+              </h2>
+              <button
+                onClick={handleCropCancel}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FontAwesomeIcon icon={faTimes} style={{ color: '#8B4513' }} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-gray-50">
+              <div className="w-full max-w-2xl">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={undefined}
+                >
+                  <img
+                    ref={imgRef}
+                    src={tempImageSrc}
+                    alt="Crop"
+                    className="max-w-full max-h-[60vh] object-contain"
+                  />
+                </ReactCrop>
+              </div>
+            </div>
+
+            <div className="flex gap-3 px-6 py-4 border-t rounded-b-3xl" style={{ borderColor: '#FFE082', backgroundColor: '#FFF8E1' }}>
+              <button
+                type="button"
+                onClick={handleCropCancel}
+                className="flex-1 py-2.5 rounded-xl border-2 bg-white font-semibold text-base transition-all hover:bg-gray-50"
+                style={{ borderColor: '#E0E0E0', color: '#8B4513' }}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={handleCropComplete}
+                disabled={!completedCrop}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-white text-base shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background: !completedCrop
+                    ? '#CCC'
+                    : 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)',
+                }}
+              >
+                <FontAwesomeIcon icon={faCrop} className="text-sm" />
+                <span className="whitespace-nowrap">Kırpmayı Onayla</span>
+              </button>
             </div>
           </div>
         </div>

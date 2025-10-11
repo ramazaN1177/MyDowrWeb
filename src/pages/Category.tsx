@@ -48,6 +48,8 @@ import {
   faSeedling,
   faGlobe,
   faEllipsisH,
+  faSortAmountDown,
+  faSortAmountUp,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
@@ -136,6 +138,7 @@ const Category = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'purchased' | 'not_purchased'>('all');
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
+  const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
   // Modal states
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -182,7 +185,7 @@ const Category = () => {
     if (allItems.length > 0) {
       filterItems();
     }
-  }, [searchText, statusFilter, allItems]);
+  }, [searchText, statusFilter, sortOrder, allItems]);
 
   // ESC tuşu ile modal kapatma
   useEffect(() => {
@@ -266,7 +269,24 @@ const Category = () => {
       filtered = filtered.filter((item) => item.status === statusFilter);
     }
 
+    // Fiyat sıralaması
+    if (sortOrder === 'asc') {
+      filtered.sort((a, b) => (a.dowryPrice || 0) - (b.dowryPrice || 0));
+    } else if (sortOrder === 'desc') {
+      filtered.sort((a, b) => (b.dowryPrice || 0) - (a.dowryPrice || 0));
+    }
+
     setItems(filtered);
+  };
+
+  const toggleSortOrder = () => {
+    if (sortOrder === 'none') {
+      setSortOrder('asc');
+    } else if (sortOrder === 'asc') {
+      setSortOrder('desc');
+    } else {
+      setSortOrder('none');
+    }
   };
 
   const handleEditItem = (item: DowryItem) => {
@@ -423,12 +443,25 @@ const Category = () => {
         <h1 className="text-2xl font-bold text-white flex-1 text-center drop-shadow-md">
           {categoryTitle}
         </h1>
-        <button
-          onClick={() => setAddModalVisible(true)}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors"
-        >
-          <FontAwesomeIcon icon={faPlus} className="text-white text-xl" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSortOrder}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors relative"
+            title={sortOrder === 'none' ? 'Sıralama yok' : sortOrder === 'asc' ? 'Artan fiyat' : 'Azalan fiyat'}
+          >
+            <FontAwesomeIcon 
+              icon={sortOrder === 'desc' ? faSortAmountDown : faSortAmountUp} 
+              className="text-white text-xl" 
+              style={{ opacity: sortOrder === 'none' ? 0.5 : 1 }}
+            />
+          </button>
+          <button
+            onClick={() => setAddModalVisible(true)}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <FontAwesomeIcon icon={faPlus} className="text-white text-xl" />
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
