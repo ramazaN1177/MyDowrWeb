@@ -357,6 +357,15 @@ const AllList = () => {
   const purchasedItems = allItems.filter((item) => item.status === 'purchased').length;
   const notPurchasedItems = allItems.filter((item) => item.status === 'not_purchased').length;
 
+  // Toplam fiyat hesaplamaları
+  const totalPrice = allItems.reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
+  const purchasedPrice = allItems
+    .filter((item) => item.status === 'purchased')
+    .reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
+  const notPurchasedPrice = allItems
+    .filter((item) => item.status === 'not_purchased')
+    .reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FFF8E1' }}>
       {/* Header */}
@@ -401,11 +410,14 @@ const AllList = () => {
               boxShadow: statusFilter === 'all' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
             }}
           >
-            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+            <p className="text-2xl font-bold" style={{ color: '#253d50' }}>
               {totalItems}
             </p>
-            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+            <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
               Toplam Eşya
+            </p>
+            <p className="text-sm font-bold mt-2" style={{ color: '#FFB300' }}>
+              ₺{totalPrice.toLocaleString('tr-TR')}
             </p>
           </button>
           <button
@@ -417,11 +429,14 @@ const AllList = () => {
               boxShadow: statusFilter === 'purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
             }}
           >
-            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+            <p className="text-2xl font-bold" style={{ color: '#253d50' }}>
               {purchasedItems}
             </p>
-            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+            <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
               Alınan
+            </p>
+            <p className="text-sm font-bold mt-2" style={{ color: '#4CAF50' }}>
+              ₺{purchasedPrice.toLocaleString('tr-TR')}
             </p>
           </button>
           <button
@@ -433,11 +448,14 @@ const AllList = () => {
               boxShadow: statusFilter === 'not_purchased' ? '0 10px 25px rgba(0,0,0,0.15)' : '0 4px 6px rgba(0,0,0,0.1)',
             }}
           >
-            <p className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+            <p className="text-2xl font-bold" style={{ color: '#253d50' }}>
               {notPurchasedItems}
             </p>
-            <p className="text-xs font-bold mt-1" style={{ color: '#8B4513' }}>
+            <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
               Alınmayan
+            </p>
+            <p className="text-sm font-bold mt-2" style={{ color: '#8B4513' }}>
+              ₺{notPurchasedPrice.toLocaleString('tr-TR')}
             </p>
           </button>
         </div>
