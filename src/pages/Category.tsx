@@ -624,7 +624,7 @@ const Category = () => {
                               'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
                             }
                             alt={item.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                             onError={(e) => {
                               // Resim yüklenemezse placeholder ikon göster
                               e.currentTarget.style.display = 'none';

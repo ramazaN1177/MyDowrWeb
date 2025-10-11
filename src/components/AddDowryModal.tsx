@@ -425,7 +425,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
               </h3>
               {imagePreview ? (
                 <div className="flex flex-col items-center">
-                  <img src={imagePreview} alt="Preview" className="w-40 h-32 object-cover rounded-xl mb-3 border-2" style={{ borderColor: '#FFB300' }} />
+                  <img src={imagePreview} alt="Preview" className="w-40 h-32 object-contain rounded-xl mb-3 border-2" style={{ borderColor: '#FFB300' }} />
                   <div className="flex gap-2">
                     <button
                       type="button"

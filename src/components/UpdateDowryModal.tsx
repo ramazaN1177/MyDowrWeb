@@ -240,7 +240,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
                     <img 
                       src={imagePreview} 
                       alt="Item" 
-                      className="w-40 h-32 object-cover rounded-xl border-2" 
+                      className="w-40 h-32 object-contain rounded-xl border-2" 
                       style={{ borderColor: '#FFB300' }}
                     />
                   </div>
