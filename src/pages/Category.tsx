@@ -50,6 +50,7 @@ import {
   faEllipsisH,
   faSortAmountDown,
   faSortAmountUp,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
@@ -139,6 +140,7 @@ const Category = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'purchased' | 'not_purchased'>('all');
   const [isReadFilter, setIsReadFilter] = useState<'all' | 'read' | 'unread'>('all');
+  const [showReadDropdown, setShowReadDropdown] = useState(false);
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
@@ -505,9 +507,9 @@ const Category = () => {
 
       {/* Search Bar */}
       <div className="px-6 mt-5">
-        <div className="flex gap-3">
+        <div className="flex gap-2 items-center">
           <div
-            className="bg-white rounded-xl p-3 shadow-lg flex items-center border-2 flex-1"
+            className="bg-white rounded-xl p-3 shadow-lg flex items-center border-2 flex-1 min-w-0"
             style={{ borderColor: '#FFB300' }}
           >
             <FontAwesomeIcon icon={faSearch} className="text-gray-500 mr-3" />
@@ -516,23 +518,88 @@ const Category = () => {
               placeholder="Eşya ara"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="flex-1 outline-none text-base"
+              className="flex-1 outline-none text-base min-w-0"
               style={{ color: '#8B4513' }}
             />
           </div>
           
           {/* Read Status Filter - Only for book category */}
           {isBookCategory && (
-            <select
-              value={isReadFilter}
-              onChange={(e) => setIsReadFilter(e.target.value as 'all' | 'read' | 'unread')}
-              className="bg-white rounded-xl px-4 py-3 shadow-lg border-2 outline-none font-semibold text-sm cursor-pointer"
-              style={{ borderColor: '#FFB300', color: '#8B4513' }}
-            >
-              <option value="all">Tümü</option>
-              <option value="read">Okundu</option>
-              <option value="unread">Okunmadı</option>
-            </select>
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowReadDropdown(!showReadDropdown)}
+                className="bg-white rounded-xl px-3 py-3 shadow-lg border-2 outline-none font-semibold text-xs cursor-pointer flex items-center gap-2"
+                style={{ 
+                  borderColor: '#FFB300', 
+                  color: '#8B4513',
+                  minWidth: '100px'
+                }}
+              >
+                <span>
+                  {isReadFilter === 'all' ? 'Tümü' : isReadFilter === 'read' ? 'Okundu' : 'Okunmadı'}
+                </span>
+                <FontAwesomeIcon 
+                  icon={faChevronDown}
+                  className={`transition-transform duration-200 ${showReadDropdown ? 'rotate-180' : ''}`}
+                  style={{ color: '#FFB300', fontSize: '10px' }}
+                />
+              </button>
+              
+              {showReadDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowReadDropdown(false)}
+                  />
+                  <div 
+                    className="absolute right-0 mt-2 bg-white rounded-xl shadow-2xl border-2 overflow-hidden z-20"
+                    style={{ borderColor: '#FFB300', minWidth: '140px' }}
+                  >
+                    <button
+                      onClick={() => {
+                        setIsReadFilter('all');
+                        setShowReadDropdown(false);
+                      }}
+                      className="w-full px-4 py-2.5 text-left font-semibold text-xs hover:bg-yellow-50 transition-colors"
+                      style={{ 
+                        color: '#8B4513',
+                        backgroundColor: isReadFilter === 'all' ? '#FFF8E1' : 'white'
+                      }}
+                    >
+                      Tümü
+                    </button>
+                    <div style={{ height: '1px', backgroundColor: '#FFE082' }} />
+                    <button
+                      onClick={() => {
+                        setIsReadFilter('read');
+                        setShowReadDropdown(false);
+                      }}
+                      className="w-full px-4 py-2.5 text-left font-semibold text-xs hover:bg-blue-50 transition-colors"
+                      style={{ 
+                        color: isReadFilter === 'read' ? '#2196F3' : '#8B4513',
+                        backgroundColor: isReadFilter === 'read' ? '#E3F2FD' : 'white'
+                      }}
+                    >
+                      Okundu
+                    </button>
+                    <div style={{ height: '1px', backgroundColor: '#FFE082' }} />
+                    <button
+                      onClick={() => {
+                        setIsReadFilter('unread');
+                        setShowReadDropdown(false);
+                      }}
+                      className="w-full px-4 py-2.5 text-left font-semibold text-xs hover:bg-gray-100 transition-colors"
+                      style={{ 
+                        color: isReadFilter === 'unread' ? '#757575' : '#8B4513',
+                        backgroundColor: isReadFilter === 'unread' ? '#F5F5F5' : 'white'
+                      }}
+                    >
+                      Okunmadı
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
