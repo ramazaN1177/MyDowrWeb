@@ -9,6 +9,7 @@ interface DowryData {
   imageId?: string;
   dowryLocation?: string;
   status: 'purchased' | 'not_purchased';
+  isRead?: boolean;
 }
 
 export function useDowry() {
@@ -290,7 +291,7 @@ export function useDowry() {
   };
 
   // Update dowry
-  const updateDowry = async (dowryId: string, dowryData: Partial<DowryData>) => {
+  const updateDowry = async (dowryId: string, dowryData: Partial<DowryData>, silent: boolean = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -307,18 +308,24 @@ export function useDowry() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success('Eşya başarıyla güncellendi');
+        if (!silent) {
+          toast.success('Eşya başarıyla güncellendi');
+        }
         return data;
       } else {
         const errorMsg = data.message || 'Eşya güncellenirken hata oluştu';
-        toast.error(errorMsg);
+        if (!silent) {
+          toast.error(errorMsg);
+        }
         throw new Error(errorMsg);
       }
     } catch (err) {
       console.error('Error updating dowry:', err);
       const errorMsg = err instanceof Error ? err.message : 'Eşya güncellenirken hata oluştu';
       setError(errorMsg);
-      toast.error(errorMsg);
+      if (!silent) {
+        toast.error(errorMsg);
+      }
       throw err;
     } finally {
       setLoading(false);

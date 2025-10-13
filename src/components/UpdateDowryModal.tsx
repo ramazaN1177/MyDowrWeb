@@ -34,6 +34,7 @@ interface DowryItem {
   Category: string;
   imageId?: string;
   dowryImage?: string;
+  isRead?: boolean;
 }
 
 interface UpdateDowryModalProps {
@@ -138,7 +139,8 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
         description: formData.description.trim() || undefined,
         dowryPrice: formData.dowryPrice.trim() ? parseFloat(formData.dowryPrice) : 0,
         dowryLocation: formData.dowryLocation.trim() || undefined,
-        status: formData.status
+        status: formData.status,
+        isRead: item?.isRead // Preserve isRead status
       };
 
       if (item?._id) {

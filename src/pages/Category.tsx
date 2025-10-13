@@ -69,6 +69,7 @@ interface DowryItem {
   dowryImage?: string;
   dowryLocation?: string;
   status: 'purchased' | 'not_purchased';
+  isRead?: boolean;
 }
 
 const Category = () => {
@@ -79,7 +80,7 @@ const Category = () => {
   const categoryColor = searchParams.get('color') || '#FFB300';
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { getDowries, deleteDowry, updateDowryStatus, getImage } = useDowry();
+  const { getDowries, deleteDowry, updateDowryStatus, getImage, updateDowry } = useDowry();
   const { categories, fetchCategories } = useCategory();
 
   // Icon mapping for category icons
@@ -349,6 +350,33 @@ const Category = () => {
       );
       setItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, status: oldStatus } : i))
+      );
+    }
+  };
+
+  const handleIsReadChange = async (item: DowryItem, newIsRead: boolean) => {
+    try {
+      if (!item._id) return;
+
+      const oldIsRead = item.isRead || false;
+
+      // Optimistic update
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, isRead: newIsRead } : i))
+      );
+      setItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, isRead: newIsRead } : i))
+      );
+
+      await updateDowry(item._id, { isRead: newIsRead }, true);
+    } catch (error) {
+      // Revert on failure
+      const oldIsRead = item.isRead || false;
+      setAllItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, isRead: oldIsRead } : i))
+      );
+      setItems((prevItems) =>
+        prevItems.map((i) => (i._id === item._id ? { ...i, isRead: oldIsRead } : i))
       );
     }
   };
@@ -649,35 +677,69 @@ const Category = () => {
                       {item.name}
                     </h3>
                   </div>
-                  {/* Modern Animated Switch */}
-                  <button
-                    onClick={() => handleStatusChange(item, item.status !== 'purchased')}
-                    className="relative flex items-center rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
-                    style={{
-                      width: '95px',
-                      height: '34px',
-                      backgroundColor: item.status === 'purchased' ? '#4CAF50' : '#8B4513',
-                    }}
-                  >
-                    {/* Switch Circle */}
-                    <div
-                      className="absolute w-7 h-7 bg-white rounded-full shadow-lg transition-all duration-300 ease-in-out"
+                  <div className="flex flex-col gap-2">
+                    {/* Purchase Status Switch */}
+                    <button
+                      onClick={() => handleStatusChange(item, item.status !== 'purchased')}
+                      className="relative flex items-center rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
                       style={{
-                        left: item.status === 'purchased' ? 'calc(100% - 32px)' : '5px',
-                      }}
-                    />
-                    
-                    {/* Status Text */}
-                    <span 
-                      className="absolute text-[11px] font-bold text-white transition-all duration-300"
-                      style={{
-                        left: item.status === 'purchased' ? '10px' : 'auto',
-                        right: item.status === 'purchased' ? 'auto' : '10px',
+                        width: '95px',
+                        height: '34px',
+                        backgroundColor: item.status === 'purchased' ? '#4CAF50' : '#8B4513',
                       }}
                     >
-                      {item.status === 'purchased' ? 'Alındı' : 'Alınmadı'}
-                    </span>
-                  </button>
+                      {/* Switch Circle */}
+                      <div
+                        className="absolute w-7 h-7 bg-white rounded-full shadow-lg transition-all duration-300 ease-in-out"
+                        style={{
+                          left: item.status === 'purchased' ? 'calc(100% - 32px)' : '5px',
+                        }}
+                      />
+                      
+                      {/* Status Text */}
+                      <span 
+                        className="absolute text-[11px] font-bold text-white transition-all duration-300"
+                        style={{
+                          left: item.status === 'purchased' ? '10px' : 'auto',
+                          right: item.status === 'purchased' ? 'auto' : '10px',
+                        }}
+                      >
+                        {item.status === 'purchased' ? 'Alındı' : 'Alınmadı'}
+                      </span>
+                    </button>
+                    
+                    {/* Read Status Switch - Only for books */}
+                    {getCurrentCategoryIcon() === 'book' && (
+                      <button
+                        onClick={() => handleIsReadChange(item, !item.isRead)}
+                        className="relative flex items-center rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
+                        style={{
+                          width: '95px',
+                          height: '34px',
+                          backgroundColor: item.isRead ? '#2196F3' : '#757575',
+                        }}
+                      >
+                        {/* Switch Circle */}
+                        <div
+                          className="absolute w-7 h-7 bg-white rounded-full shadow-lg transition-all duration-300 ease-in-out"
+                          style={{
+                            left: item.isRead ? 'calc(100% - 32px)' : '5px',
+                          }}
+                        />
+                        
+                        {/* Read Status Text */}
+                        <span 
+                          className="absolute text-[10px] font-bold text-white transition-all duration-300"
+                          style={{
+                            left: item.isRead ? '8px' : 'auto',
+                            right: item.isRead ? 'auto' : '6px',
+                          }}
+                        >
+                          {item.isRead ? 'Okundu' : 'Okunmadı'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-sm mb-4 opacity-80" style={{ color: '#8B4513' }}>
