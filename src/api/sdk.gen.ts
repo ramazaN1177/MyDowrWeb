@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
+import type { DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryAddBooksData, PostApiDowryAddBooksErrors, PostApiDowryAddBooksResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -383,6 +383,28 @@ export const deleteApiDowryDeleteById = <ThrowOnError extends boolean = false>(o
         ],
         url: '/api/dowry/delete/{id}',
         ...options
+    });
+};
+
+/**
+ * Add multiple books at once
+ * Add multiple books from formatted text (Author – Book Name format)
+ */
+export const postApiDowryAddBooks = <ThrowOnError extends boolean = false>(options: Options<PostApiDowryAddBooksData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostApiDowryAddBooksResponses, PostApiDowryAddBooksErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/dowry/addBooks',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
     });
 };
 

@@ -41,7 +41,6 @@ import {
   faWallet,
   faMapMarkerAlt,
   faCrop,
-  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
@@ -101,7 +100,7 @@ interface AddDowryModalProps {
 }
 
 export default function AddDowryModal({ visible, onClose, onSuccess, category, categories = [] }: AddDowryModalProps) {
-  const { uploadImage, createDowry, performOCR, deleteImage, loading } = useDowry();
+  const { uploadImage, createDowry, addBooks, loading } = useDowry();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -112,12 +111,15 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadedImageId, setUploadedImageId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(category === 'select' ? '' : (category || ''));
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [isCategoryLocked, setIsCategoryLocked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  
+  // Book bulk add states
+  const [bookText, setBookText] = useState('');
+  const isBookCategory = categories.find(cat => cat.id === selectedCategory)?.icon === 'book';
   
   // Image cropping states
   const [showCropModal, setShowCropModal] = useState(false);
@@ -131,7 +133,6 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   });
   const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const isSuccessfulSubmit = useRef(false);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -145,8 +146,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       });
       setSelectedImage(null);
       setImagePreview(null);
-      setUploadedImageId(null);
-      isSuccessfulSubmit.current = false; // Reset flag
+      setBookText(''); // Reset book text
       
       // Kategori varsa ve 'select' değilse, otomatik seç ve kilitle
       const hasValidCategory = Boolean(category && category !== 'select' && category !== '');
@@ -155,47 +155,6 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }
   }, [visible, category]);
 
-  // Component unmount veya sayfa yenilendiğinde orphan resmi sil
-  useEffect(() => {
-    // Sayfa yenilenme/kapanma durumunda resmi sil
-    const handleBeforeUnload = () => {
-      // Başarılı submit değilse resmi sil
-      if (uploadedImageId && !isSuccessfulSubmit.current) {
-        // fetch with keepalive flag - sayfa kapansa bile istek tamamlanır
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${uploadedImageId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-          keepalive: true // Sayfa kapansa bile isteği gönder
-        }).catch(err => console.error('Cleanup error:', err));
-      }
-    };
-
-    // Sayfa yenileme/kapanma event listener'ı
-    if (uploadedImageId) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    }
-    
-    // Cleanup function - component unmount olduğunda
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      // Component unmount olurken resmi sil (başarılı submit değilse)
-      if (uploadedImageId && !isSuccessfulSubmit.current) {
-        // Direkt fetch kullan - deleteImage dependency sorununu önler
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${uploadedImageId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-        }).catch(err => console.error('Cleanup error:', err));
-      }
-    };
-  }, [uploadedImageId]); // deleteImage'ı dependency'den çıkardık
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -203,7 +162,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }));
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 7 * 1024 * 1024) { // 7 MB limit
@@ -214,12 +173,6 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       if (!file.type.startsWith('image/')) {
         toast.error('Lütfen bir resim dosyası seçin');
         return;
-      }
-
-      // Eski resim varsa önce sil
-      if (uploadedImageId) {
-        await deleteImage(uploadedImageId);
-        setUploadedImageId(null);
       }
 
       // Resmi kırpmak için modal aç
@@ -287,49 +240,6 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       reader.readAsDataURL(croppedFile);
       setShowCropModal(false);
       setTempImageSrc('');
-
-      // Kategori icon'u "book" ise OCR yap
-      const selectedCat = categories.find(cat => cat.id === selectedCategory);
-      if (selectedCat && selectedCat.icon === 'book') {
-        try {
-          toast.info('Kitap bilgileri okunuyor...');
-          
-          // Önce resmi yükle
-          const imageId = await uploadImage(croppedFile);
-          
-          if (imageId) {
-            // Upload edilen imageId'yi sakla
-            setUploadedImageId(imageId);
-            
-            // OCR işlemi yap
-            const ocrResult = await performOCR(imageId);
-            
-            if (ocrResult) {
-              // Kitap adı ve yazar adını forma doldur
-              if (ocrResult.bookName) {
-                setFormData(prev => ({
-                  ...prev,
-                  name: ocrResult.bookName || prev.name
-                }));
-              }
-              
-              if (ocrResult.authorName) {
-                setFormData(prev => ({
-                  ...prev,
-                  description: ocrResult.authorName || prev.description
-                }));
-              }
-              
-              toast.success('Kitap bilgileri otomatik olarak dolduruldu!');
-            } else {
-              toast.warning('Kitap bilgileri okunamadı, manuel olarak girebilirsiniz.');
-            }
-          }
-        } catch (error) {
-          console.error('OCR error:', error);
-          toast.warning('Kitap bilgileri okunamadı, manuel olarak girebilirsiniz.');
-        }
-      }
     } else {
       toast.error('Resim kırpılamadı');
     }
@@ -345,29 +255,10 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
-  // Resmi sil
-  const handleDeleteImage = async () => {
-    if (uploadedImageId) {
-      const deleted = await deleteImage(uploadedImageId);
-      if (deleted) {
-        toast.success('Resim silindi');
-      }
-    }
-    
-    // State'leri temizle
-    setSelectedImage(null);
-    setImagePreview(null);
-    setUploadedImageId(null);
-    
-    // File input'ları sıfırla
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation - sadece kategori ve isim zorunlu
+    // Validation - sadece kategori zorunlu
     if (!selectedCategory) {
       toast.error('Lütfen bir kategori seçiniz');
       return;
@@ -378,6 +269,24 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       return;
     }
 
+    // Kitap kategorisi ise
+    if (isBookCategory) {
+      if (!bookText.trim()) {
+        toast.error('Lütfen kitap listesi giriniz');
+        return;
+      }
+
+      try {
+        await addBooks(bookText, selectedCategory);
+        onSuccess();
+        onClose();
+      } catch (error) {
+        // Error already handled in hook
+      }
+      return;
+    }
+
+    // Normal eşya için validasyon
     if (!formData.name.trim()) {
       toast.error('Eşya adı gereklidir');
       return;
@@ -394,9 +303,9 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }
 
     try {
-      // Upload image if selected and not already uploaded
-      let imageId = uploadedImageId || '';
-      if (selectedImage && !uploadedImageId) {
+      // Upload image if selected
+      let imageId = '';
+      if (selectedImage) {
         imageId = await uploadImage(selectedImage) || '';
         if (!imageId) {
           return; // Error already shown by uploadImage
@@ -423,11 +332,6 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       };
 
       await createDowry(dowryData);
-      
-      // Başarılı oldu, resim artık dowry ile ilişkilendirildi
-      // Flag'i true yap ki cleanup sırasında silinmesin
-      isSuccessfulSubmit.current = true;
-      
       onSuccess();
       onClose();
     } catch (error) {
@@ -447,21 +351,12 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     setShowCategoryPicker(false);
   };
 
-  // Modal kapanırken orphan resmi temizle
-  const handleClose = async () => {
-    // Başarılı submit değilse resmi sil
-    if (uploadedImageId && !isSuccessfulSubmit.current) {
-      await deleteImage(uploadedImageId);
-    }
-    onClose();
-  };
-
   if (!visible) return null;
 
   return (
     <div
       className="fixed inset-0 bg-white/30 backdrop-blur-md flex items-center justify-center z-50 p-5"
-      onClick={handleClose}
+      onClick={onClose}
     >
       <div
         className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col"
@@ -470,10 +365,10 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b" style={{ borderColor: '#FFB300' }}>
           <h2 className="text-2xl font-bold" style={{ color: '#8B4513' }}>
-            Yeni Eşya Ekle
+            {isBookCategory ? 'Kitap Ekle' : 'Yeni Eşya Ekle'}
           </h2>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             disabled={loading}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
           >
@@ -546,169 +441,191 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
               )}
             </div>
 
-            {/* Image Upload Section */}
-            <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
-              <h3 className="text-lg font-bold text-center mb-3" style={{ color: '#8B4513' }}>
-                Eşya Fotoğrafı
-              </h3>
-              {imagePreview ? (
-                <div className="flex flex-col items-center">
-                  <img src={imagePreview} alt="Preview" className="w-40 h-32 object-contain rounded-xl mb-3 border-2" style={{ borderColor: '#FFB300' }} />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
-                      style={{ backgroundColor: '#FFB300' }}
-                    >
-                      <FontAwesomeIcon icon={faCamera} className="text-sm" />
-                      <span>Kamera</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
-                      style={{ backgroundColor: '#8B4513' }}
-                    >
-                      <FontAwesomeIcon icon={faImage} className="text-sm" />
-                      <span>Dosya</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteImage}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
-                      style={{ backgroundColor: '#DC2626' }}
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="text-sm" />
-                      <span>Sil</span>
-                    </button>
-                  </div>
+            {/* Book Category - Show only textarea */}
+            {isBookCategory ? (
+              <div className="mb-4">
+                <label className="block text-lg font-bold mb-3" style={{ color: '#8B4513' }}>
+                  Kitap Listesi *
+                </label>
+                <div className="p-4 rounded-xl mb-3" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
+                  <p className="text-sm mb-2" style={{ color: '#8B4513' }}>
+                    <strong>Format:</strong> Her satıra bir kitap yazın. Format: <code>Yazar – Kitap Adı</code>
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Örnek: William Shakespeare – Romeo ve Juliet
+                  </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Camera Button */}
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl hover:bg-yellow-50 transition-all hover:border-solid"
-                    style={{ borderColor: '#FFB300' }}
-                  >
-                    <FontAwesomeIcon icon={faCamera} className="text-4xl mb-2" style={{ color: '#FFB300' }} />
-                    <span className="font-medium text-sm" style={{ color: '#8B4513' }}>Kameradan Çek</span>
-                  </button>
-                  
-                  {/* File Upload Button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl hover:bg-yellow-50 transition-all hover:border-solid"
-                    style={{ borderColor: '#FFB300' }}
-                  >
-                    <FontAwesomeIcon icon={faImage} className="text-4xl mb-2" style={{ color: '#FFB300' }} />
-                    <span className="font-medium text-sm" style={{ color: '#8B4513' }}>Dosya Yükle</span>
-                  </button>
-                </div>
-              )}
-              
-              {/* Hidden File Inputs */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-            </div>
-
-            {/* Form Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Input
-                label="Eşya Adı *"
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Örn: Bulaşık Makinesi"
-                leftIcon={<FontAwesomeIcon icon={faTag} />}
-                disabled={loading}
-                focusBackground={true}
-                size="md"
-              />
-
-              <Input
-                label="Fiyat (₺)"
-                type="number"
-                value={formData.dowryPrice}
-                onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
-                placeholder="0"
-                leftIcon={<FontAwesomeIcon icon={faWallet} />}
-                disabled={loading}
-                focusBackground={true}
-                size="md"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                Açıklama
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Eşya hakkında detaylı bilgi"
-                rows={3}
-                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none"
-                style={{ borderColor: '#FFB300' }}
-                disabled={loading}
-              />
-            </div>
-
-            <Input
-              label="Konum"
-              type="text"
-              value={formData.dowryLocation}
-              onChange={(e) => handleInputChange('dowryLocation', e.target.value)}
-              placeholder="Örn: İstanbul, Türkiye"
-              leftIcon={<FontAwesomeIcon icon={faMapMarkerAlt} />}
-              disabled={loading}
-              focusBackground={true}
-              size="md"
-            />
-
-            <div className="mb-4">
-              <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                Durum
-              </label>
-              <button
-                type="button"
-                onClick={toggleStatus}
-                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border-2 font-bold text-white transition-all"
-                style={{
-                  backgroundColor: formData.status === 'purchased' ? '#4CAF50' : '#8B4513',
-                  borderColor: '#FFB300'
-                }}
-                disabled={loading}
-              >
-                <FontAwesomeIcon 
-                  icon={formData.status === 'purchased' ? faCheckCircle : faTimesCircle}
+                <textarea
+                  value={bookText}
+                  onChange={(e) => setBookText(e.target.value)}
+                  placeholder="William Shakespeare – Romeo ve Juliet&#10;Fyodor M. Dostoyevski – Yeraltından Notlar&#10;Oscar Wilde – Dorian Gray'in Portresi"
+                  rows={15}
+                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none font-mono text-sm"
+                  style={{ borderColor: '#FFB300' }}
+                  disabled={loading}
                 />
-                <span>{formData.status === 'purchased' ? 'Alındı' : 'Alınmadı'}</span>
-              </button>
-            </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {bookText.split('\n').filter(line => line.trim()).length} kitap girildi
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Image Upload Section */}
+                <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
+                  <h3 className="text-lg font-bold text-center mb-3" style={{ color: '#8B4513' }}>
+                    Eşya Fotoğrafı
+                  </h3>
+                  {imagePreview ? (
+                    <div className="flex flex-col items-center">
+                      <img src={imagePreview} alt="Preview" className="w-40 h-32 object-contain rounded-xl mb-3 border-2" style={{ borderColor: '#FFB300' }} />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
+                          style={{ backgroundColor: '#FFB300' }}
+                        >
+                          <FontAwesomeIcon icon={faCamera} className="text-sm" />
+                          <span>Kamera</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
+                          style={{ backgroundColor: '#8B4513' }}
+                        >
+                          <FontAwesomeIcon icon={faImage} className="text-sm" />
+                          <span>Dosya</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Camera Button */}
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl hover:bg-yellow-50 transition-all hover:border-solid"
+                        style={{ borderColor: '#FFB300' }}
+                      >
+                        <FontAwesomeIcon icon={faCamera} className="text-4xl mb-2" style={{ color: '#FFB300' }} />
+                        <span className="font-medium text-sm" style={{ color: '#8B4513' }}>Kameradan Çek</span>
+                      </button>
+                      
+                      {/* File Upload Button */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-xl hover:bg-yellow-50 transition-all hover:border-solid"
+                        style={{ borderColor: '#FFB300' }}
+                      >
+                        <FontAwesomeIcon icon={faImage} className="text-4xl mb-2" style={{ color: '#FFB300' }} />
+                        <span className="font-medium text-sm" style={{ color: '#8B4513' }}>Dosya Yükle</span>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Hidden File Inputs */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Form Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <Input
+                    label="Eşya Adı *"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Örn: Bulaşık Makinesi"
+                    leftIcon={<FontAwesomeIcon icon={faTag} />}
+                    disabled={loading}
+                    focusBackground={true}
+                    size="md"
+                  />
+
+                  <Input
+                    label="Fiyat (₺)"
+                    type="number"
+                    value={formData.dowryPrice}
+                    onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
+                    placeholder="0"
+                    leftIcon={<FontAwesomeIcon icon={faWallet} />}
+                    disabled={loading}
+                    focusBackground={true}
+                    size="md"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
+                    Açıklama
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Eşya hakkında detaylı bilgi"
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none"
+                    style={{ borderColor: '#FFB300' }}
+                    disabled={loading}
+                  />
+                </div>
+
+                <Input
+                  label="Konum"
+                  type="text"
+                  value={formData.dowryLocation}
+                  onChange={(e) => handleInputChange('dowryLocation', e.target.value)}
+                  placeholder="Örn: İstanbul, Türkiye"
+                  leftIcon={<FontAwesomeIcon icon={faMapMarkerAlt} />}
+                  disabled={loading}
+                  focusBackground={true}
+                  size="md"
+                />
+
+                <div className="mb-4">
+                  <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
+                    Durum
+                  </label>
+                  <button
+                    type="button"
+                    onClick={toggleStatus}
+                    className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border-2 font-bold text-white transition-all"
+                    style={{
+                      backgroundColor: formData.status === 'purchased' ? '#4CAF50' : '#8B4513',
+                      borderColor: '#FFB300'
+                    }}
+                    disabled={loading}
+                  >
+                    <FontAwesomeIcon 
+                      icon={formData.status === 'purchased' ? faCheckCircle : faTimesCircle}
+                    />
+                    <span>{formData.status === 'purchased' ? 'Alındı' : 'Alınmadı'}</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer */}
           <div className="flex gap-3 px-6 py-4 border-t rounded-b-3xl" style={{ borderColor: '#FFE082', backgroundColor: '#FFF8E1' }}>
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               disabled={loading}
               className="flex-1 py-3 rounded-xl border-2 bg-white font-bold text-lg transition-all hover:bg-gray-50 disabled:opacity-50"
               style={{ borderColor: '#E0E0E0', color: '#8B4513' }}
@@ -717,10 +634,10 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.name.trim() || !selectedCategory}
+              disabled={loading || !selectedCategory || (isBookCategory ? !bookText.trim() : !formData.name.trim())}
               className="flex-1 py-3 rounded-xl font-bold text-white text-lg shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                background: loading || !formData.name.trim() || !selectedCategory
+                background: loading || !selectedCategory || (isBookCategory ? !bookText.trim() : !formData.name.trim())
                   ? '#CCC'
                   : 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)',
               }}
@@ -736,7 +653,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
               ) : (
                 <>
                   <FontAwesomeIcon icon={faPlusCircle} />
-                  Eşyayı Ekle
+                  {isBookCategory ? 'Kitapları Ekle' : 'Eşyayı Ekle'}
                 </>
               )}
             </button>

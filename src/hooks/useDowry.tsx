@@ -357,56 +357,47 @@ export function useDowry() {
     }
   };
 
-  // OCR for book images
-  const performOCR = async (imageId: string): Promise<{ bookName?: string; authorName?: string } | null> => {
+  // Add multiple books at once
+  const addBooks = async (text: string, categoryId: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/ocr/${imageId}`, {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/dowry/addBooks`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success && data.bookInfo) {
-        return {
-          bookName: data.bookInfo.title,
-          authorName: data.bookInfo.author
-        };
-      } else {
-        console.warn('OCR failed:', data.message);
-        return null;
-      }
-    } catch (err) {
-      console.error('Error performing OCR:', err);
-      return null;
-    }
-  };
-
-  // Delete image
-  const deleteImage = async (imageId: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${imageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify({ text, categoryId }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        return true;
+        const successCount = data.data?.summary?.successful || 0;
+        const failedCount = data.data?.summary?.failed || 0;
+        
+        if (failedCount > 0) {
+          toast.warning(`${successCount} kitap eklendi, ${failedCount} kitap eklenemedi`);
+        } else {
+          toast.success(`${successCount} kitap başarıyla eklendi`);
+        }
+        
+        return data;
       } else {
-        console.warn('Image delete failed:', data.message);
-        return false;
+        const errorMsg = data.message || 'Kitaplar eklenirken hata oluştu';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err) {
-      console.error('Error deleting image:', err);
-      return false;
+      console.error('Error adding books:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Kitaplar eklenirken hata oluştu';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -423,8 +414,7 @@ export function useDowry() {
     getImage,
     updateDowry,
     getDowryById,
-    performOCR,
-    deleteImage,
+    addBooks,
   };
 }
 

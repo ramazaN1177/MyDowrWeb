@@ -653,6 +653,60 @@ export type DeleteApiDowryDeleteByIdResponses = {
 
 export type DeleteApiDowryDeleteByIdResponse = DeleteApiDowryDeleteByIdResponses[keyof DeleteApiDowryDeleteByIdResponses];
 
+export type PostApiDowryAddBooksData = {
+    body: {
+        /**
+         * Multi-line text with format: Author – Book Name
+         */
+        text: string;
+        /**
+         * Category ID (should be book category)
+         */
+        categoryId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/dowry/addBooks';
+};
+
+export type PostApiDowryAddBooksErrors = {
+    /**
+     * Bad request
+     */
+    400: _Error;
+};
+
+export type PostApiDowryAddBooksError = PostApiDowryAddBooksErrors[keyof PostApiDowryAddBooksErrors];
+
+export type PostApiDowryAddBooksResponses = {
+    /**
+     * Books added successfully
+     */
+    201: {
+        success?: boolean;
+        message?: string;
+        data?: {
+            created?: Array<{
+                bookName?: string;
+                author?: string;
+                id?: string;
+            }>;
+            errors?: Array<{
+                line?: number;
+                text?: string;
+                error?: string;
+            }>;
+            summary?: {
+                total?: number;
+                successful?: number;
+                failed?: number;
+            };
+        };
+    };
+};
+
+export type PostApiDowryAddBooksResponse = PostApiDowryAddBooksResponses[keyof PostApiDowryAddBooksResponses];
+
 export type PostApiImageUploadData = {
     body: {
         /**
