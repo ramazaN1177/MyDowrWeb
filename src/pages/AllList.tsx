@@ -153,10 +153,10 @@ const AllList = () => {
 
   // Filtreleme ve arama için ayrı effect
   useEffect(() => {
-    if (allItems.length > 0) {
+    if (allItems.length > 0 && categories.length > 0) {
       filterItems();
     }
-  }, [searchText, statusFilter, sortOrder, allItems]);
+  }, [searchText, statusFilter, sortOrder, allItems, categories]);
 
   // ESC tuşu ile modal kapatma
   useEffect(() => {
@@ -220,6 +220,12 @@ const AllList = () => {
 
   const filterItems = () => {
     let filtered = [...allItems];
+
+    // Kitap kategorisini filtrele (gösterme)
+    filtered = filtered.filter((item) => {
+      const category = categories.find(cat => cat.id === item.Category);
+      return category?.icon !== 'book';
+    });
 
     // Arama filtresi
     if (searchText.trim()) {
@@ -373,16 +379,22 @@ const AllList = () => {
     };
   };
 
-  const totalItems = allItems.length;
-  const purchasedItems = allItems.filter((item) => item.status === 'purchased').length;
-  const notPurchasedItems = allItems.filter((item) => item.status === 'not_purchased').length;
+  // Kitap kategorisi hariç itemlar
+  const nonBookItems = allItems.filter((item) => {
+    const category = categories.find(cat => cat.id === item.Category);
+    return category?.icon !== 'book';
+  });
+
+  const totalItems = nonBookItems.length;
+  const purchasedItems = nonBookItems.filter((item) => item.status === 'purchased').length;
+  const notPurchasedItems = nonBookItems.filter((item) => item.status === 'not_purchased').length;
 
   // Toplam fiyat hesaplamaları
-  const totalPrice = allItems.reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
-  const purchasedPrice = allItems
+  const totalPrice = nonBookItems.reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
+  const purchasedPrice = nonBookItems
     .filter((item) => item.status === 'purchased')
     .reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
-  const notPurchasedPrice = allItems
+  const notPurchasedPrice = nonBookItems
     .filter((item) => item.status === 'not_purchased')
     .reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
 
