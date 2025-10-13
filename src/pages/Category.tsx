@@ -818,8 +818,8 @@ const Category = () => {
                       </span>
                     </button>
                     
-                    {/* Read Status Switch - Only for books */}
-                    {getCurrentCategoryIcon() === 'book' && (
+                    {/* Read Status Switch - Only for purchased books */}
+                    {getCurrentCategoryIcon() === 'book' && item.status === 'purchased' && (
                       <button
                         onClick={() => handleIsReadChange(item, !item.isRead)}
                         className="relative flex items-center rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
