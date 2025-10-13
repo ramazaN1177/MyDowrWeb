@@ -485,17 +485,19 @@ const Category = () => {
           {categoryTitle}
         </h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleSortOrder}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors relative"
-            title={sortOrder === 'none' ? 'Sıralama yok' : sortOrder === 'asc' ? 'Artan fiyat' : 'Azalan fiyat'}
-          >
-            <FontAwesomeIcon 
-              icon={sortOrder === 'desc' ? faSortAmountDown : faSortAmountUp} 
-              className="text-white text-xl" 
-              style={{ opacity: sortOrder === 'none' ? 0.5 : 1 }}
-            />
-          </button>
+          {!isBookCategory && (
+            <button
+              onClick={toggleSortOrder}
+              className="p-2 hover:bg-white/20 rounded-full transition-colors relative"
+              title={sortOrder === 'none' ? 'Sıralama yok' : sortOrder === 'asc' ? 'Artan fiyat' : 'Azalan fiyat'}
+            >
+              <FontAwesomeIcon 
+                icon={sortOrder === 'desc' ? faSortAmountDown : faSortAmountUp} 
+                className="text-white text-xl" 
+                style={{ opacity: sortOrder === 'none' ? 0.5 : 1 }}
+              />
+            </button>
+          )}
           <button
             onClick={() => setAddModalVisible(true)}
             className="p-2 hover:bg-white/20 rounded-full transition-colors"
