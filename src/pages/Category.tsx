@@ -138,6 +138,7 @@ const Category = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'purchased' | 'not_purchased'>('all');
+  const [isReadFilter, setIsReadFilter] = useState<'all' | 'read' | 'unread'>('all');
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
 
@@ -186,7 +187,7 @@ const Category = () => {
     if (allItems.length > 0) {
       filterItems();
     }
-  }, [searchText, statusFilter, sortOrder, allItems]);
+  }, [searchText, statusFilter, isReadFilter, sortOrder, allItems]);
 
   // ESC tuşu ile modal kapatma
   useEffect(() => {
@@ -268,6 +269,15 @@ const Category = () => {
     // Durum filtresi
     if (statusFilter !== 'all') {
       filtered = filtered.filter((item) => item.status === statusFilter);
+    }
+
+    // Okundu filtresi (sadece kitap kategorisi için)
+    if (isReadFilter !== 'all' && getCurrentCategoryIcon() === 'book') {
+      if (isReadFilter === 'read') {
+        filtered = filtered.filter((item) => item.isRead === true);
+      } else if (isReadFilter === 'unread') {
+        filtered = filtered.filter((item) => item.isRead !== true);
+      }
     }
 
     // Fiyat sıralaması
@@ -495,19 +505,35 @@ const Category = () => {
 
       {/* Search Bar */}
       <div className="px-6 mt-5">
-        <div
-          className="bg-white rounded-xl p-3 shadow-lg flex items-center border-2"
-          style={{ borderColor: '#FFB300' }}
-        >
-          <FontAwesomeIcon icon={faSearch} className="text-gray-500 mr-3" />
-          <input
-            type="text"
-            placeholder="Eşya ara"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="flex-1 outline-none text-base"
-            style={{ color: '#8B4513' }}
-          />
+        <div className="flex gap-3">
+          <div
+            className="bg-white rounded-xl p-3 shadow-lg flex items-center border-2 flex-1"
+            style={{ borderColor: '#FFB300' }}
+          >
+            <FontAwesomeIcon icon={faSearch} className="text-gray-500 mr-3" />
+            <input
+              type="text"
+              placeholder="Eşya ara"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="flex-1 outline-none text-base"
+              style={{ color: '#8B4513' }}
+            />
+          </div>
+          
+          {/* Read Status Filter - Only for book category */}
+          {isBookCategory && (
+            <select
+              value={isReadFilter}
+              onChange={(e) => setIsReadFilter(e.target.value as 'all' | 'read' | 'unread')}
+              className="bg-white rounded-xl px-4 py-3 shadow-lg border-2 outline-none font-semibold text-sm cursor-pointer"
+              style={{ borderColor: '#FFB300', color: '#8B4513' }}
+            >
+              <option value="all">Tümü</option>
+              <option value="read">Okundu</option>
+              <option value="unread">Okunmadı</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -634,6 +660,7 @@ const Category = () => {
                 onClick={() => {
                   setSearchText('');
                   setStatusFilter('all');
+                  setIsReadFilter('all');
                 }}
                 className="px-8 py-3 rounded-full font-bold text-white shadow-xl border-2 border-white"
                 style={{ backgroundColor: '#FFB300' }}
