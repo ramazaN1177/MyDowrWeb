@@ -460,7 +460,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
                   onChange={(e) => setBookText(e.target.value)}
                   placeholder="William Shakespeare – Romeo ve Juliet&#10;Fyodor M. Dostoyevski – Yeraltından Notlar&#10;Oscar Wilde – Dorian Gray'in Portresi"
                   rows={15}
-                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none font-mono text-sm"
+                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none font-sans text-xs leading-relaxed"
                   style={{ borderColor: '#FFB300' }}
                   disabled={loading}
                 />
