@@ -425,6 +425,9 @@ const Category = () => {
   const totalItems = allItems.length;
   const purchasedItems = allItems.filter((item) => item.status === 'purchased').length;
   const notPurchasedItems = allItems.filter((item) => item.status === 'not_purchased').length;
+  
+  // Kitap kategorisi kontrolü
+  const isBookCategory = getCurrentCategoryIcon() === 'book';
 
   // Toplam fiyat hesaplamaları (kategori bazlı)
   const totalPrice = allItems.reduce((sum, item) => sum + (item.dowryPrice || 0), 0);
@@ -525,7 +528,7 @@ const Category = () => {
               {totalItems}
             </p>
             <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
-              Toplam Eşya
+              {isBookCategory ? 'Toplam' : 'Toplam Eşya'}
             </p>
             <p className="text-sm font-bold mt-2" style={{ color: categoryColor }}>
               ₺{totalPrice.toLocaleString('tr-TR')}
@@ -546,9 +549,20 @@ const Category = () => {
             <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
               Alınan
             </p>
-            <p className="text-sm font-bold mt-2" style={{ color: '#4CAF50' }}>
-              ₺{purchasedPrice.toLocaleString('tr-TR')}
-            </p>
+            {isBookCategory ? (
+              <div className="text-[9px] font-medium mt-2 text-gray-600 leading-tight">
+                <div className="mb-0.5">
+                  Okunan: <span className="text-blue-500 font-semibold">{allItems.filter(item => item.status === 'purchased' && item.isRead).length}</span>
+                </div>
+                <div>
+                  Okunmayan: <span className="font-semibold">{allItems.filter(item => item.status === 'purchased' && !item.isRead).length}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-bold mt-2" style={{ color: '#4CAF50' }}>
+                ₺{purchasedPrice.toLocaleString('tr-TR')}
+              </p>
+            )}
           </button>
           <button
             onClick={() => setStatusFilter('not_purchased')}
@@ -565,9 +579,11 @@ const Category = () => {
             <p className="text-xs font-bold mt-1" style={{ color: '#253d50' }}>
               Alınmayan
             </p>
-            <p className="text-sm font-bold mt-2" style={{ color: '#8B4513' }}>
-              ₺{notPurchasedPrice.toLocaleString('tr-TR')}
-            </p>
+            {!isBookCategory && (
+              <p className="text-sm font-bold mt-2" style={{ color: '#8B4513' }}>
+                ₺{notPurchasedPrice.toLocaleString('tr-TR')}
+              </p>
+            )}
           </button>
         </div>
 
