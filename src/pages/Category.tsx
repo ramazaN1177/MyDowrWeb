@@ -358,8 +358,6 @@ const Category = () => {
     try {
       if (!item._id) return;
 
-      const oldIsRead = item.isRead || false;
-
       // Optimistic update
       setAllItems((prevItems) =>
         prevItems.map((i) => (i._id === item._id ? { ...i, isRead: newIsRead } : i))
