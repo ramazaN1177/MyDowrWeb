@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
+import type { DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -388,7 +388,7 @@ export const deleteApiDowryDeleteById = <ThrowOnError extends boolean = false>(o
 
 /**
  * Upload an image
- * Upload an image file to GridFS
+ * Upload an image file. For OCR processing, use the /api/image/ocr/:id endpoint after upload.
  */
 export const postApiImageUpload = <ThrowOnError extends boolean = false>(options: Options<PostApiImageUploadData, ThrowOnError>) => {
     return (options.client ?? client).post<PostApiImageUploadResponses, PostApiImageUploadErrors, ThrowOnError>({
@@ -459,6 +459,24 @@ export const getApiImageUserImages = <ThrowOnError extends boolean = false>(opti
             }
         ],
         url: '/api/image/user/images',
+        ...options
+    });
+};
+
+/**
+ * Process image with OCR
+ * Extract book title and author from an image using Tesseract OCR and Open Library API. Does not save to database, only returns the result. Frontend should check category icon before calling this endpoint.
+ */
+export const postApiImageOcrById = <ThrowOnError extends boolean = false>(options: Options<PostApiImageOcrByIdData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostApiImageOcrByIdResponses, PostApiImageOcrByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/image/ocr/{id}',
         ...options
     });
 };

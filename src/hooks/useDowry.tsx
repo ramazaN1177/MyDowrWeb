@@ -357,6 +357,59 @@ export function useDowry() {
     }
   };
 
+  // OCR for book images
+  const performOCR = async (imageId: string): Promise<{ bookName?: string; authorName?: string } | null> => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/ocr/${imageId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.bookInfo) {
+        return {
+          bookName: data.bookInfo.title,
+          authorName: data.bookInfo.author
+        };
+      } else {
+        console.warn('OCR failed:', data.message);
+        return null;
+      }
+    } catch (err) {
+      console.error('Error performing OCR:', err);
+      return null;
+    }
+  };
+
+  // Delete image
+  const deleteImage = async (imageId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return true;
+      } else {
+        console.warn('Image delete failed:', data.message);
+        return false;
+      }
+    } catch (err) {
+      console.error('Error deleting image:', err);
+      return false;
+    }
+  };
+
   return {
     loading,
     error,
@@ -370,6 +423,8 @@ export function useDowry() {
     getImage,
     updateDowry,
     getDowryById,
+    performOCR,
+    deleteImage,
   };
 }
 

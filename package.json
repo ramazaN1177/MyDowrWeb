@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "openapi-ts -i https://my-dowry.onrender.com/api-docs.json -o ./src/api -c @hey-api/client-axios"
+    "generate:api": "openapi-ts -i http://localhost:5001/api-docs.json -o ./src/api -c @hey-api/client-axios"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",

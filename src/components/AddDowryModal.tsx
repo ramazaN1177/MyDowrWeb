@@ -41,6 +41,7 @@ import {
   faWallet,
   faMapMarkerAlt,
   faCrop,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
@@ -100,7 +101,7 @@ interface AddDowryModalProps {
 }
 
 export default function AddDowryModal({ visible, onClose, onSuccess, category, categories = [] }: AddDowryModalProps) {
-  const { uploadImage, createDowry, loading } = useDowry();
+  const { uploadImage, createDowry, performOCR, deleteImage, loading } = useDowry();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -111,6 +112,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageId, setUploadedImageId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(category === 'select' ? '' : (category || ''));
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [isCategoryLocked, setIsCategoryLocked] = useState(false);
@@ -129,6 +131,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   });
   const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const isSuccessfulSubmit = useRef(false);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -142,6 +145,8 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       });
       setSelectedImage(null);
       setImagePreview(null);
+      setUploadedImageId(null);
+      isSuccessfulSubmit.current = false; // Reset flag
       
       // Kategori varsa ve 'select' değilse, otomatik seç ve kilitle
       const hasValidCategory = Boolean(category && category !== 'select' && category !== '');
@@ -150,6 +155,47 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }
   }, [visible, category]);
 
+  // Component unmount veya sayfa yenilendiğinde orphan resmi sil
+  useEffect(() => {
+    // Sayfa yenilenme/kapanma durumunda resmi sil
+    const handleBeforeUnload = () => {
+      // Başarılı submit değilse resmi sil
+      if (uploadedImageId && !isSuccessfulSubmit.current) {
+        // fetch with keepalive flag - sayfa kapansa bile istek tamamlanır
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${uploadedImageId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+          keepalive: true // Sayfa kapansa bile isteği gönder
+        }).catch(err => console.error('Cleanup error:', err));
+      }
+    };
+
+    // Sayfa yenileme/kapanma event listener'ı
+    if (uploadedImageId) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+    
+    // Cleanup function - component unmount olduğunda
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Component unmount olurken resmi sil (başarılı submit değilse)
+      if (uploadedImageId && !isSuccessfulSubmit.current) {
+        // Direkt fetch kullan - deleteImage dependency sorununu önler
+        fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image/${uploadedImageId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        }).catch(err => console.error('Cleanup error:', err));
+      }
+    };
+  }, [uploadedImageId]); // deleteImage'ı dependency'den çıkardık
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -157,7 +203,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }));
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 7 * 1024 * 1024) { // 7 MB limit
@@ -168,6 +214,12 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       if (!file.type.startsWith('image/')) {
         toast.error('Lütfen bir resim dosyası seçin');
         return;
+      }
+
+      // Eski resim varsa önce sil
+      if (uploadedImageId) {
+        await deleteImage(uploadedImageId);
+        setUploadedImageId(null);
       }
 
       // Resmi kırpmak için modal aç
@@ -235,6 +287,49 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       reader.readAsDataURL(croppedFile);
       setShowCropModal(false);
       setTempImageSrc('');
+
+      // Kategori icon'u "book" ise OCR yap
+      const selectedCat = categories.find(cat => cat.id === selectedCategory);
+      if (selectedCat && selectedCat.icon === 'book') {
+        try {
+          toast.info('Kitap bilgileri okunuyor...');
+          
+          // Önce resmi yükle
+          const imageId = await uploadImage(croppedFile);
+          
+          if (imageId) {
+            // Upload edilen imageId'yi sakla
+            setUploadedImageId(imageId);
+            
+            // OCR işlemi yap
+            const ocrResult = await performOCR(imageId);
+            
+            if (ocrResult) {
+              // Kitap adı ve yazar adını forma doldur
+              if (ocrResult.bookName) {
+                setFormData(prev => ({
+                  ...prev,
+                  name: ocrResult.bookName || prev.name
+                }));
+              }
+              
+              if (ocrResult.authorName) {
+                setFormData(prev => ({
+                  ...prev,
+                  description: ocrResult.authorName || prev.description
+                }));
+              }
+              
+              toast.success('Kitap bilgileri otomatik olarak dolduruldu!');
+            } else {
+              toast.warning('Kitap bilgileri okunamadı, manuel olarak girebilirsiniz.');
+            }
+          }
+        } catch (error) {
+          console.error('OCR error:', error);
+          toast.warning('Kitap bilgileri okunamadı, manuel olarak girebilirsiniz.');
+        }
+      }
     } else {
       toast.error('Resim kırpılamadı');
     }
@@ -246,6 +341,25 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     setTempImageSrc('');
     setCompletedCrop(null);
     // Reset file inputs
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  // Resmi sil
+  const handleDeleteImage = async () => {
+    if (uploadedImageId) {
+      const deleted = await deleteImage(uploadedImageId);
+      if (deleted) {
+        toast.success('Resim silindi');
+      }
+    }
+    
+    // State'leri temizle
+    setSelectedImage(null);
+    setImagePreview(null);
+    setUploadedImageId(null);
+    
+    // File input'ları sıfırla
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -280,9 +394,9 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     }
 
     try {
-      // Upload image if selected
-      let imageId = '';
-      if (selectedImage) {
+      // Upload image if selected and not already uploaded
+      let imageId = uploadedImageId || '';
+      if (selectedImage && !uploadedImageId) {
         imageId = await uploadImage(selectedImage) || '';
         if (!imageId) {
           return; // Error already shown by uploadImage
@@ -309,6 +423,11 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
       };
 
       await createDowry(dowryData);
+      
+      // Başarılı oldu, resim artık dowry ile ilişkilendirildi
+      // Flag'i true yap ki cleanup sırasında silinmesin
+      isSuccessfulSubmit.current = true;
+      
       onSuccess();
       onClose();
     } catch (error) {
@@ -328,12 +447,21 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     setShowCategoryPicker(false);
   };
 
+  // Modal kapanırken orphan resmi temizle
+  const handleClose = async () => {
+    // Başarılı submit değilse resmi sil
+    if (uploadedImageId && !isSuccessfulSubmit.current) {
+      await deleteImage(uploadedImageId);
+    }
+    onClose();
+  };
+
   if (!visible) return null;
 
   return (
     <div
       className="fixed inset-0 bg-white/30 backdrop-blur-md flex items-center justify-center z-50 p-5"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col"
@@ -345,7 +473,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
             Yeni Eşya Ekle
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
           >
@@ -444,6 +572,15 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
                     >
                       <FontAwesomeIcon icon={faImage} className="text-sm" />
                       <span>Dosya</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteImage}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-white transition-all hover:shadow-lg text-xs"
+                      style={{ backgroundColor: '#DC2626' }}
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="text-sm" />
+                      <span>Sil</span>
                     </button>
                   </div>
                 </div>
@@ -571,7 +708,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
           <div className="flex gap-3 px-6 py-4 border-t rounded-b-3xl" style={{ borderColor: '#FFE082', backgroundColor: '#FFF8E1' }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={loading}
               className="flex-1 py-3 rounded-xl border-2 bg-white font-bold text-lg transition-all hover:bg-gray-50 disabled:opacity-50"
               style={{ borderColor: '#E0E0E0', color: '#8B4513' }}
