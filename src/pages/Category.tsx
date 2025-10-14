@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -145,6 +145,9 @@ const Category = () => {
   const [showReadDropdown, setShowReadDropdown] = useState(false);
   const [imageCache, setImageCache] = useState<{ [key: string]: string }>({});
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
+  
+  // Items yüklenme kontrolü için ref
+  const hasLoadedItems = useRef(false);
 
   // Modal states
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -186,12 +189,18 @@ const Category = () => {
     }
   }, [categoryId, isAuthenticated, authLoading]);
 
-  // Kategoriler yüklendikten sonra item'ları yükle
+  // Kategoriler yüklendikten sonra item'ları yükle (sadece bir kez)
   useEffect(() => {
-    if (categories.length > 0 && categoryId && isAuthenticated) {
+    if (categories.length > 0 && categoryId && isAuthenticated && !hasLoadedItems.current) {
+      hasLoadedItems.current = true;
       loadCategoryItems();
     }
   }, [categories, categoryId, isAuthenticated]);
+
+  // CategoryId değiştiğinde ref'i sıfırla
+  useEffect(() => {
+    hasLoadedItems.current = false;
+  }, [categoryId]);
 
   // Filtreleme ve arama için ayrı effect
   useEffect(() => {
