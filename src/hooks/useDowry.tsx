@@ -9,7 +9,6 @@ interface DowryData {
   imageId?: string;
   dowryLocation?: string;
   status: 'purchased' | 'not_purchased';
-  isRead?: boolean;
 }
 
 export function useDowry() {
@@ -364,50 +363,6 @@ export function useDowry() {
     }
   };
 
-  // Add multiple books at once
-  const addBooks = async (text: string, categoryId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/dowry/addBooks`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text, categoryId }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const successCount = data.data?.summary?.successful || 0;
-        const failedCount = data.data?.summary?.failed || 0;
-        
-        if (failedCount > 0) {
-          toast.warning(`${successCount} kitap eklendi, ${failedCount} kitap eklenemedi`);
-        } else {
-          toast.success(`${successCount} kitap başarıyla eklendi`);
-        }
-        
-        return data;
-      } else {
-        const errorMsg = data.message || 'Kitaplar eklenirken hata oluştu';
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-    } catch (err) {
-      console.error('Error adding books:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Kitaplar eklenirken hata oluştu';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return {
     loading,
     error,
@@ -421,7 +376,6 @@ export function useDowry() {
     getImage,
     updateDowry,
     getDowryById,
-    addBooks,
   };
 }
 

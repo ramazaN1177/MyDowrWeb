@@ -44,6 +44,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
+import { useBook } from '../hooks/useBook';
 import Input from './Input';
 import ReactCrop from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
@@ -100,7 +101,9 @@ interface AddDowryModalProps {
 }
 
 export default function AddDowryModal({ visible, onClose, onSuccess, category, categories = [] }: AddDowryModalProps) {
-  const { uploadImage, createDowry, addBooks, loading } = useDowry();
+  const { uploadImage, createDowry, loading: dowryLoading } = useDowry();
+  const { addBooks, loading: bookLoading } = useBook();
+  const loading = dowryLoading || bookLoading;
   
   const [formData, setFormData] = useState({
     name: '',

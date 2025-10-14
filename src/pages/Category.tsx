@@ -58,6 +58,7 @@ import AddDowryModal from '../components/AddDowryModal';
 import UpdateDowryModal from '../components/UpdateDowryModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useDowry } from '../hooks/useDowry';
+import { useBook } from '../hooks/useBook';
 import { useCategory } from '../hooks/useCategory';
 
 interface DowryItem {
@@ -81,7 +82,8 @@ const Category = () => {
   const categoryColor = searchParams.get('color') || '#FFB300';
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { getDowries, deleteDowry, updateDowryStatus, getImage, updateDowry } = useDowry();
+  const { getDowries, deleteDowry, updateDowryStatus, getImage } = useDowry();
+  const { getBooks, deleteBook, updateBookStatus, updateBook } = useBook();
   const { categories, fetchCategories } = useCategory();
 
   // Icon mapping for category icons
@@ -176,13 +178,20 @@ const Category = () => {
     }
     
     if (categoryId && isAuthenticated) {
-      loadCategoryItems();
+      // Önce kategorileri yükle
       fetchCategories();
     } else if (!isAuthenticated) {
       setError('Oturum açmanız gerekiyor');
       setLoading(false);
     }
   }, [categoryId, isAuthenticated, authLoading]);
+
+  // Kategoriler yüklendikten sonra item'ları yükle
+  useEffect(() => {
+    if (categories.length > 0 && categoryId && isAuthenticated) {
+      loadCategoryItems();
+    }
+  }, [categories, categoryId, isAuthenticated]);
 
   // Filtreleme ve arama için ayrı effect
   useEffect(() => {
@@ -234,18 +243,47 @@ const Category = () => {
         return;
       }
 
-      // Tüm itemları çek (filtresiz)
-      const response = await getDowries({
-        category: categoryId,
-        page: 1,
-        limit: 1000,
-      });
+      // Check if category is book
+      const isBookCat = getCurrentCategoryIcon() === 'book';
+      
+      if (isBookCat) {
+        // Use book endpoint
+        const response = await getBooks({
+          Category: categoryId,
+          page: 1,
+          limit: 1000,
+        });
 
-      if (response) {
-        setAllItems(response);
-        setItems(response); // İlk yüklemede tümünü göster
+        if (response) {
+          // Map book response to match DowryItem interface
+          const mappedBooks = response.map((book: any) => ({
+            _id: book._id,
+            name: book.name || '',
+            description: book.author || '',
+            Category: book.Category || categoryId,
+            dowryPrice: 0,
+            status: book.status || 'not_purchased',
+            isRead: book.isRead || false,
+          }));
+          setAllItems(mappedBooks);
+          setItems(mappedBooks);
+        } else {
+          setError('Kitaplar yüklenirken bir hata oluştu');
+        }
       } else {
-        setError('Eşyalar yüklenirken bir hata oluştu');
+        // Use dowry endpoint
+        const response = await getDowries({
+          category: categoryId,
+          page: 1,
+          limit: 1000,
+        });
+
+        if (response) {
+          setAllItems(response);
+          setItems(response);
+        } else {
+          setError('Eşyalar yüklenirken bir hata oluştu');
+        }
       }
     } catch (error) {
       setError('Eşyalar yüklenirken bir hata oluştu');
@@ -317,7 +355,16 @@ const Category = () => {
 
     try {
       setIsDeleting(true);
-      await deleteDowry(itemToDelete._id);
+      
+      // Check if category is book
+      const isBookCat = getCurrentCategoryIcon() === 'book';
+      
+      if (isBookCat) {
+        await deleteBook(itemToDelete._id);
+      } else {
+        await deleteDowry(itemToDelete._id);
+      }
+      
       setAllItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       setItems((prevItems) => prevItems.filter((i) => i._id !== itemToDelete._id));
       setDeleteDialogVisible(false);
@@ -344,7 +391,11 @@ const Category = () => {
         prevItems.map((i) => (i._id === item._id ? { ...i, status } : i))
       );
 
-      const success = await updateDowryStatus(item._id, status);
+      // Check if category is book
+      const isBookCat = getCurrentCategoryIcon() === 'book';
+      const success = isBookCat 
+        ? await updateBookStatus(item._id, status)
+        : await updateDowryStatus(item._id, status);
 
       if (!success) {
         // Revert on failure
@@ -378,7 +429,8 @@ const Category = () => {
         prevItems.map((i) => (i._id === item._id ? { ...i, isRead: newIsRead } : i))
       );
 
-      await updateDowry(item._id, { isRead: newIsRead }, true);
+      // Use book update endpoint for book category
+      await updateBook(item._id, { isRead: newIsRead }, true);
     } catch (error) {
       // Revert on failure
       const oldIsRead = item.isRead || false;

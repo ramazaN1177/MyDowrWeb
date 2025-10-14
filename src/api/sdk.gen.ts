@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryAddBooksData, PostApiDowryAddBooksErrors, PostApiDowryAddBooksResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
+import type { DeleteApiBookDeleteByIdData, DeleteApiBookDeleteByIdErrors, DeleteApiBookDeleteByIdResponses, DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiBookGetData, GetApiBookGetResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiBookUpdateStatusByIdData, PatchApiBookUpdateStatusByIdErrors, PatchApiBookUpdateStatusByIdResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiBookCreateData, PostApiBookCreateErrors, PostApiBookCreateResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiBookUpdateByIdData, PutApiBookUpdateByIdErrors, PutApiBookUpdateByIdResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -209,6 +209,108 @@ export const postApiAuthChangePassword = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Add multiple books from text
+ * Add multiple books at once from formatted text (Author - Book Name per line)
+ */
+export const postApiBookCreate = <ThrowOnError extends boolean = false>(options: Options<PostApiBookCreateData, ThrowOnError>) => {
+    return (options.client ?? client).post<PostApiBookCreateResponses, PostApiBookCreateErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/book/create',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Get all books
+ * Get all books with optional filters and pagination
+ */
+export const getApiBookGet = <ThrowOnError extends boolean = false>(options?: Options<GetApiBookGetData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetApiBookGetResponses, unknown, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/book/get',
+        ...options
+    });
+};
+
+/**
+ * Update a book
+ * Update a book's information
+ */
+export const putApiBookUpdateById = <ThrowOnError extends boolean = false>(options: Options<PutApiBookUpdateByIdData, ThrowOnError>) => {
+    return (options.client ?? client).put<PutApiBookUpdateByIdResponses, PutApiBookUpdateByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/book/update/{id}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Update book status
+ * Update only the status of a book
+ */
+export const patchApiBookUpdateStatusById = <ThrowOnError extends boolean = false>(options: Options<PatchApiBookUpdateStatusByIdData, ThrowOnError>) => {
+    return (options.client ?? client).patch<PatchApiBookUpdateStatusByIdResponses, PatchApiBookUpdateStatusByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/book/update-status/{id}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Delete a book
+ * Delete a book
+ */
+export const deleteApiBookDeleteById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiBookDeleteByIdData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteApiBookDeleteByIdResponses, DeleteApiBookDeleteByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/book/delete/{id}',
+        ...options
+    });
+};
+
+/**
  * Add a new category
  * Add a new category
  */
@@ -383,28 +485,6 @@ export const deleteApiDowryDeleteById = <ThrowOnError extends boolean = false>(o
         ],
         url: '/api/dowry/delete/{id}',
         ...options
-    });
-};
-
-/**
- * Add multiple books at once
- * Add multiple books from formatted text (Author – Book Name format)
- */
-export const postApiDowryAddBooks = <ThrowOnError extends boolean = false>(options: Options<PostApiDowryAddBooksData, ThrowOnError>) => {
-    return (options.client ?? client).post<PostApiDowryAddBooksResponses, PostApiDowryAddBooksErrors, ThrowOnError>({
-        responseType: 'json',
-        security: [
-            {
-                scheme: 'bearer',
-                type: 'http'
-            }
-        ],
-        url: '/api/dowry/addBooks',
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-        }
     });
 };
 

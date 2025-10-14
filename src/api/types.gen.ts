@@ -19,6 +19,18 @@ export type _Error = {
     error?: string;
 };
 
+export type Book = {
+    _id?: string;
+    name?: string;
+    author?: string;
+    Category?: string;
+    status?: 'purchased' | 'not_purchased';
+    isRead?: boolean;
+    userId?: string;
+    createdAt?: string;
+    updatedAt?: string;
+};
+
 export type Category = {
     _id?: string;
     name?: string;
@@ -332,6 +344,216 @@ export type PostApiAuthChangePasswordResponses = {
 
 export type PostApiAuthChangePasswordResponse = PostApiAuthChangePasswordResponses[keyof PostApiAuthChangePasswordResponses];
 
+export type PostApiBookCreateData = {
+    body: {
+        text: string;
+        categoryId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/book/create';
+};
+
+export type PostApiBookCreateErrors = {
+    /**
+     * Bad request
+     */
+    400: _Error;
+};
+
+export type PostApiBookCreateError = PostApiBookCreateErrors[keyof PostApiBookCreateErrors];
+
+export type PostApiBookCreateResponses = {
+    /**
+     * Books added successfully
+     */
+    201: {
+        success?: boolean;
+        message?: string;
+        data?: {
+            created?: Array<{
+                bookName?: string;
+                author?: string;
+                id?: string;
+            }>;
+            errors?: Array<{
+                [key: string]: unknown;
+            }>;
+            summary?: {
+                total?: number;
+                successful?: number;
+                failed?: number;
+            };
+        };
+    };
+};
+
+export type PostApiBookCreateResponse = PostApiBookCreateResponses[keyof PostApiBookCreateResponses];
+
+export type GetApiBookGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Filter by status
+         */
+        status?: 'purchased' | 'not_purchased';
+        /**
+         * Filter by category ID
+         */
+        Category?: string;
+        /**
+         * Filter by read status
+         */
+        isRead?: boolean;
+        /**
+         * Search in name and author
+         */
+        search?: string;
+        /**
+         * Page number
+         */
+        page?: number;
+        /**
+         * Items per page
+         */
+        limit?: number;
+    };
+    url: '/api/book/get';
+};
+
+export type GetApiBookGetResponses = {
+    /**
+     * Books fetched successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        books?: Array<Book>;
+        pagination?: {
+            total?: number;
+            page?: number;
+            pages?: number;
+            limit?: number;
+        };
+    };
+};
+
+export type GetApiBookGetResponse = GetApiBookGetResponses[keyof GetApiBookGetResponses];
+
+export type PutApiBookUpdateByIdData = {
+    body: {
+        name?: string;
+        author?: string;
+        Category?: string;
+        status?: 'purchased' | 'not_purchased';
+        isRead?: boolean;
+    };
+    path: {
+        /**
+         * Book ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/book/update/{id}';
+};
+
+export type PutApiBookUpdateByIdErrors = {
+    /**
+     * Book not found
+     */
+    404: _Error;
+};
+
+export type PutApiBookUpdateByIdError = PutApiBookUpdateByIdErrors[keyof PutApiBookUpdateByIdErrors];
+
+export type PutApiBookUpdateByIdResponses = {
+    /**
+     * Book updated successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        book?: Book;
+    };
+};
+
+export type PutApiBookUpdateByIdResponse = PutApiBookUpdateByIdResponses[keyof PutApiBookUpdateByIdResponses];
+
+export type PatchApiBookUpdateStatusByIdData = {
+    body: {
+        status: 'purchased' | 'not_purchased';
+    };
+    path: {
+        /**
+         * Book ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/book/update-status/{id}';
+};
+
+export type PatchApiBookUpdateStatusByIdErrors = {
+    /**
+     * Bad request
+     */
+    400: _Error;
+    /**
+     * Book not found
+     */
+    404: _Error;
+};
+
+export type PatchApiBookUpdateStatusByIdError = PatchApiBookUpdateStatusByIdErrors[keyof PatchApiBookUpdateStatusByIdErrors];
+
+export type PatchApiBookUpdateStatusByIdResponses = {
+    /**
+     * Book status updated successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        book?: Book;
+    };
+};
+
+export type PatchApiBookUpdateStatusByIdResponse = PatchApiBookUpdateStatusByIdResponses[keyof PatchApiBookUpdateStatusByIdResponses];
+
+export type DeleteApiBookDeleteByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Book ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/book/delete/{id}';
+};
+
+export type DeleteApiBookDeleteByIdErrors = {
+    /**
+     * Book not found
+     */
+    404: _Error;
+};
+
+export type DeleteApiBookDeleteByIdError = DeleteApiBookDeleteByIdErrors[keyof DeleteApiBookDeleteByIdErrors];
+
+export type DeleteApiBookDeleteByIdResponses = {
+    /**
+     * Book deleted successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+    };
+};
+
+export type DeleteApiBookDeleteByIdResponse = DeleteApiBookDeleteByIdResponses[keyof DeleteApiBookDeleteByIdResponses];
+
 export type PostApiCategoryAddData = {
     body: {
         name: string;
@@ -459,6 +681,10 @@ export type GetApiDowryGetData = {
          * Search in name and description fields
          */
         search?: string;
+        /**
+         * Filter by read status (for books)
+         */
+        isRead?: boolean;
         /**
          * Page number
          */
@@ -652,60 +878,6 @@ export type DeleteApiDowryDeleteByIdResponses = {
 };
 
 export type DeleteApiDowryDeleteByIdResponse = DeleteApiDowryDeleteByIdResponses[keyof DeleteApiDowryDeleteByIdResponses];
-
-export type PostApiDowryAddBooksData = {
-    body: {
-        /**
-         * Multi-line text with format: Author – Book Name
-         */
-        text: string;
-        /**
-         * Category ID (should be book category)
-         */
-        categoryId: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/dowry/addBooks';
-};
-
-export type PostApiDowryAddBooksErrors = {
-    /**
-     * Bad request
-     */
-    400: _Error;
-};
-
-export type PostApiDowryAddBooksError = PostApiDowryAddBooksErrors[keyof PostApiDowryAddBooksErrors];
-
-export type PostApiDowryAddBooksResponses = {
-    /**
-     * Books added successfully
-     */
-    201: {
-        success?: boolean;
-        message?: string;
-        data?: {
-            created?: Array<{
-                bookName?: string;
-                author?: string;
-                id?: string;
-            }>;
-            errors?: Array<{
-                line?: number;
-                text?: string;
-                error?: string;
-            }>;
-            summary?: {
-                total?: number;
-                successful?: number;
-                failed?: number;
-            };
-        };
-    };
-};
-
-export type PostApiDowryAddBooksResponse = PostApiDowryAddBooksResponses[keyof PostApiDowryAddBooksResponses];
 
 export type PostApiImageUploadData = {
     body: {

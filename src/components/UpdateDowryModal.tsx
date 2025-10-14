@@ -13,6 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
+import { useBook } from '../hooks/useBook';
 import Input from './Input';
 
 
@@ -46,7 +47,9 @@ interface UpdateDowryModalProps {
 }
 
 export default function UpdateDowryModal({ visible, onClose, onSuccess, item, categories = [] }: UpdateDowryModalProps) {
-  const { updateDowry, getImage, loading } = useDowry();
+  const { updateDowry, getImage, loading: dowryLoading } = useDowry();
+  const { updateBook, loading: bookLoading } = useBook();
+  const loading = dowryLoading || bookLoading;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -123,8 +126,12 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
       return;
     }
 
-    // Fiyat girildiyse kontrol et
-    if (formData.dowryPrice.trim()) {
+    // Check if category is book
+    const category = categories.find(cat => cat.id === selectedCategory);
+    const isBookCategory = category?.icon === 'book';
+
+    // Fiyat girildiyse kontrol et (only for non-book categories)
+    if (!isBookCategory && formData.dowryPrice.trim()) {
       const price = parseFloat(formData.dowryPrice);
       if (isNaN(price) || price < 0) {
         toast.error('Geçerli bir fiyat giriniz');
@@ -133,18 +140,27 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
     }
 
     try {
-      // Update dowry data - sadece güncellenebilir alanlar
-      const dowryData: any = {
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-        dowryPrice: formData.dowryPrice.trim() ? parseFloat(formData.dowryPrice) : 0,
-        dowryLocation: formData.dowryLocation.trim() || undefined,
-        status: formData.status,
-        isRead: item?.isRead // Preserve isRead status
-      };
-
       if (item?._id) {
-        await updateDowry(item._id, dowryData);
+        if (isBookCategory) {
+          // Update book
+          const bookData: any = {
+            name: formData.name.trim(),
+            author: formData.description.trim() || undefined,
+            status: formData.status,
+            isRead: item?.isRead
+          };
+          await updateBook(item._id, bookData);
+        } else {
+          // Update dowry data - sadece güncellenebilir alanlar
+          const dowryData: any = {
+            name: formData.name.trim(),
+            description: formData.description.trim() || undefined,
+            dowryPrice: formData.dowryPrice.trim() ? parseFloat(formData.dowryPrice) : 0,
+            dowryLocation: formData.dowryLocation.trim() || undefined,
+            status: formData.status,
+          };
+          await updateDowry(item._id, dowryData);
+        }
       }
       onSuccess();
       onClose();
@@ -232,104 +248,120 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
                 </div>
               </div>
 
-              {/* Image Display (Read Only) */}
-              <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
-                <h3 className="text-lg font-bold text-center mb-3" style={{ color: '#8B4513' }}>
-                  Fotoğraf
-                </h3>
-                {imagePreview ? (
-                  <div className="flex flex-col items-center">
-                    <img 
-                      src={imagePreview} 
-                      alt="Item" 
-                      className="w-40 h-32 object-contain rounded-xl border-2" 
-                      style={{ borderColor: '#FFB300' }}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="w-40 h-32 border-2 border-dashed rounded-xl flex items-center justify-center" style={{ borderColor: '#FFB300', backgroundColor: '#FFF' }}>
-                      <FontAwesomeIcon icon={faImage} className="text-3xl" style={{ color: '#CCC' }} />
+              {/* Check if category is book */}
+              {(() => {
+                const category = categories.find(cat => cat.id === selectedCategory);
+                const isBookCategory = category?.icon === 'book';
+
+                return (
+                  <>
+                    {/* Image Display (Read Only) - Hide for books */}
+                    {!isBookCategory && (
+                      <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
+                        <h3 className="text-lg font-bold text-center mb-3" style={{ color: '#8B4513' }}>
+                          Fotoğraf
+                        </h3>
+                        {imagePreview ? (
+                          <div className="flex flex-col items-center">
+                            <img 
+                              src={imagePreview} 
+                              alt="Item" 
+                              className="w-40 h-32 object-contain rounded-xl border-2" 
+                              style={{ borderColor: '#FFB300' }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <div className="w-40 h-32 border-2 border-dashed rounded-xl flex items-center justify-center" style={{ borderColor: '#FFB300', backgroundColor: '#FFF' }}>
+                              <FontAwesomeIcon icon={faImage} className="text-3xl" style={{ color: '#CCC' }} />
+                            </div>
+                            <p className="text-sm text-gray-500 mt-2">Fotoğraf yok</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Form Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <Input
+                        label={isBookCategory ? "Kitap Adı *" : "Eşya Adı *"}
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        placeholder={isBookCategory ? "Örn: Suç ve Ceza" : "Örn: Bulaşık Makinesi"}
+                        leftIcon={<FontAwesomeIcon icon={faTag} />}
+                        disabled={loading}
+                        focusBackground={true}
+                        size="md"
+                      />
+
+                      {!isBookCategory && (
+                        <Input
+                          label="Fiyat (₺)"
+                          type="number"
+                          value={formData.dowryPrice}
+                          onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
+                          placeholder="0"
+                          leftIcon={<FontAwesomeIcon icon={faWallet} />}
+                          disabled={loading}
+                          focusBackground={true}
+                          size="md"
+                        />
+                      )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-2">Fotoğraf yok</p>
-                  </div>
-                )}
-              </div>
 
-              {/* Form Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <Input
-                  label="Eşya Adı *"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Örn: Bulaşık Makinesi"
-                  leftIcon={<FontAwesomeIcon icon={faTag} />}
-                  disabled={loading}
-                  focusBackground={true}
-                  size="md"
-                />
+                    <div className="mb-4">
+                      <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
+                        {isBookCategory ? "Yazar" : "Açıklama"}
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        placeholder={isBookCategory ? "Yazar adı" : "Eşya hakkında detaylı bilgi"}
+                        rows={3}
+                        className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none"
+                        style={{ borderColor: '#FFB300' }}
+                        disabled={loading}
+                      />
+                    </div>
 
-                <Input
-                  label="Fiyat (₺)"
-                  type="number"
-                  value={formData.dowryPrice}
-                  onChange={(e) => handleInputChange('dowryPrice', e.target.value)}
-                  placeholder="0"
-                  leftIcon={<FontAwesomeIcon icon={faWallet} />}
-                  disabled={loading}
-                  focusBackground={true}
-                  size="md"
-                />
-              </div>
+                    {!isBookCategory && (
+                      <Input
+                        label="Konum"
+                        type="text"
+                        value={formData.dowryLocation}
+                        onChange={(e) => handleInputChange('dowryLocation', e.target.value)}
+                        placeholder="Örn: İstanbul, Türkiye"
+                        leftIcon={<FontAwesomeIcon icon={faMapMarkerAlt} />}
+                        disabled={loading}
+                        focusBackground={true}
+                        size="md"
+                      />
+                    )}
 
-              <div className="mb-4">
-                <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                  Açıklama
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Eşya hakkında detaylı bilgi"
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors resize-none"
-                  style={{ borderColor: '#FFB300' }}
-                  disabled={loading}
-                />
-              </div>
-
-              <Input
-                label="Konum"
-                type="text"
-                value={formData.dowryLocation}
-                onChange={(e) => handleInputChange('dowryLocation', e.target.value)}
-                placeholder="Örn: İstanbul, Türkiye"
-                leftIcon={<FontAwesomeIcon icon={faMapMarkerAlt} />}
-                disabled={loading}
-                focusBackground={true}
-                size="md"
-              />
-
-              <div className="mb-4 mt-4">
-                <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
-                  Durum
-                </label>
-                <button
-                  type="button"
-                  onClick={toggleStatus}
-                  className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border-2 font-bold text-white transition-all"
-                  style={{
-                    backgroundColor: formData.status === 'purchased' ? '#4CAF50' : '#8B4513',
-                    borderColor: '#FFB300'
-                  }}
-                  disabled={loading}
-                >
-                  <FontAwesomeIcon 
-                    icon={formData.status === 'purchased' ? faCheckCircle : faTimesCircle}
-                  />
-                  <span>{formData.status === 'purchased' ? 'Alındı' : 'Alınmadı'}</span>
-                </button>
-              </div>
+                    <div className="mb-4 mt-4">
+                      <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
+                        Durum
+                      </label>
+                      <button
+                        type="button"
+                        onClick={toggleStatus}
+                        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border-2 font-bold text-white transition-all"
+                        style={{
+                          backgroundColor: formData.status === 'purchased' ? '#4CAF50' : '#8B4513',
+                          borderColor: '#FFB300'
+                        }}
+                        disabled={loading}
+                      >
+                        <FontAwesomeIcon 
+                          icon={formData.status === 'purchased' ? faCheckCircle : faTimesCircle}
+                        />
+                        <span>{formData.status === 'purchased' ? 'Alındı' : 'Alınmadı'}</span>
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Footer */}
