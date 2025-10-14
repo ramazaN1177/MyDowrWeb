@@ -45,6 +45,10 @@ const Login = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isLoading) {
+            return;
+        }
         
         if (!email.trim() || !password.trim()) {
             toast.error('Lütfen tüm alanları doldurun');

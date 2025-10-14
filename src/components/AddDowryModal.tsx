@@ -261,6 +261,11 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prevent multiple submissions
+    if (loading) {
+      return;
+    }
+
     // Validation - sadece kategori zorunlu
     if (!selectedCategory) {
       toast.error('Lütfen bir kategori seçiniz');

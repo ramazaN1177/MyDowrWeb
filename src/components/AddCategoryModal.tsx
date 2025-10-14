@@ -82,6 +82,10 @@ export default function AddCategoryModal({ visible, onClose, onSuccess }: AddCat
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (loading) {
+      return;
+    }
+
     if (!categoryName.trim()) {
       toast.error('Kategori adı boş olamaz');
       return;

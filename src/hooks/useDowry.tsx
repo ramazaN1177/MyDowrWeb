@@ -430,7 +430,6 @@ export function useDowry() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success('Resim başarıyla silindi');
         return true;
       } else {
         const errorMsg = data.message || 'Resim silinirken hata oluştu';

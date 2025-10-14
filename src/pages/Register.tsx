@@ -24,6 +24,10 @@ const Register = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isLoading) {
+            return;
+        }
         
         // Validation
         if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {

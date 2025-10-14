@@ -69,6 +69,10 @@ const ValidationPage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
+        if (isLoading) {
+            return;
+        }
+
         const fullCode = code.join('');
         
         if (fullCode.length !== 6) {
