@@ -810,7 +810,7 @@ const Category = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center flex-1">
-                    {/* Resim veya placeholder ikon */}
+                    {/* Resim veya kategori ikonu */}
                     <div className="w-12 h-12 rounded-lg border-2 mr-3 shadow-sm flex items-center justify-center" style={{ borderColor: categoryColor, backgroundColor: '#FFF8E1' }}>
                       {(item.imageId || item.dowryImage) ? (
                         <button
@@ -825,7 +825,7 @@ const Category = () => {
                             alt={item.name}
                             className="w-full h-full object-contain"
                             onError={(e) => {
-                              // Resim yüklenemezse placeholder ikon göster
+                              // Resim yüklenemezse kategori ikonunu göster
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}

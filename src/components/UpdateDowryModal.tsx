@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTimes,
@@ -10,11 +10,15 @@ import {
   faTag,
   faWallet,
   faMapMarkerAlt,
+  faCrop,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
 import { useBook } from '../hooks/useBook';
 import Input from './Input';
+import ReactCrop from 'react-image-crop';
+import type { Crop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 
 interface Category {
@@ -47,7 +51,7 @@ interface UpdateDowryModalProps {
 }
 
 export default function UpdateDowryModal({ visible, onClose, onSuccess, item, categories = [] }: UpdateDowryModalProps) {
-  const { updateDowry, getImage, loading: dowryLoading } = useDowry();
+  const { updateDowry, getImage, updateDowryImage, removeDowryImage, loading: dowryLoading } = useDowry();
   const { updateBook, loading: bookLoading } = useBook();
   const loading = dowryLoading || bookLoading;
   
@@ -61,6 +65,22 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [imageRemoved, setImageRemoved] = useState(false);
+  
+  // Image cropping states
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState<string>('');
+  const [crop, setCrop] = useState<Crop>({
+    unit: '%',
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5
+  });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Load existing dowry data from props
   useEffect(() => {
@@ -84,6 +104,12 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
       });
       
       setSelectedCategory(item.Category || '');
+      setNewImageFile(null);
+      setImageChanged(false);
+      setImageRemoved(false);
+      setShowCropModal(false);
+      setTempImageSrc('');
+      setCompletedCrop(null);
       
       // Load existing image if available
       if (item.imageId || item.dowryImage) {
@@ -111,6 +137,116 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
     }));
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Lütfen geçerli bir resim dosyası seçin');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error('Resim boyutu 5MB\'dan küçük olmalıdır');
+        return;
+      }
+
+      // Show crop modal instead of direct preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempImageSrc(reader.result as string);
+        setShowCropModal(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setNewImageFile(null);
+    setImagePreview(null);
+    setImageChanged(true);
+    setImageRemoved(true);
+    setShowCropModal(false);
+    setTempImageSrc('');
+    setCompletedCrop(null);
+  };
+
+  // Kırpılmış resmi canvas'a çiz ve File'a çevir
+  const getCroppedImage = async (): Promise<File | null> => {
+    if (!completedCrop || !imgRef.current) {
+      return null;
+    }
+
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width,
+      completedCrop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
+        resolve(file);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  // Kırpma işlemini onayla
+  const handleCropComplete = async () => {
+    const croppedFile = await getCroppedImage();
+    if (croppedFile) {
+      setNewImageFile(croppedFile);
+      setImageChanged(true);
+      setImageRemoved(false); // Yeni resim eklendi, kaldırıldı durumunu sıfırla
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(croppedFile);
+      setShowCropModal(false);
+      setTempImageSrc('');
+      setCompletedCrop(null);
+    } else {
+      toast.error('Resim kırpılamadı');
+    }
+  };
+
+  // Kırpma işlemini iptal et
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setTempImageSrc('');
+    setCompletedCrop(null);
+    // Reset file inputs
+    const fileInputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+    fileInputs.forEach(input => {
+      if (input) input.value = '';
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,6 +296,19 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
             status: formData.status,
           };
           await updateDowry(item._id, dowryData);
+
+          // Handle image changes
+          if (imageChanged) {
+            if (imageRemoved && !newImageFile) {
+              // Resim kaldırıldı ve yeni resim yok - mevcut resmi sil
+              if (item._id) {
+                await removeDowryImage(item._id);
+              }
+            } else if (newImageFile) {
+              // Yeni resim var - güncelle
+              await updateDowryImage(item._id, newImageFile);
+            }
+          }
         }
       }
       onSuccess();
@@ -255,27 +404,57 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
 
                 return (
                   <>
-                    {/* Image Display (Read Only) - Hide for books */}
+                    {/* Image Upload/Display - Hide for books */}
                     {!isBookCategory && (
                       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFB300' }}>
                         <h3 className="text-lg font-bold text-center mb-3" style={{ color: '#8B4513' }}>
                           Fotoğraf
                         </h3>
                         {imagePreview ? (
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col items-center gap-3">
                             <img 
                               src={imagePreview} 
                               alt="Item" 
                               className="w-40 h-32 object-contain rounded-xl border-2" 
                               style={{ borderColor: '#FFB300' }}
                             />
+                            <div className="flex gap-2">
+                              <label className="cursor-pointer px-4 py-2 rounded-lg font-semibold text-white text-sm transition-all hover:shadow-md" style={{ background: 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)' }}>
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  onChange={handleImageSelect}
+                                  className="hidden"
+                                  disabled={loading}
+                                />
+                                Değiştir
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleRemoveImage}
+                                disabled={loading}
+                                className="px-4 py-2 rounded-lg font-semibold text-white text-sm transition-all hover:shadow-md"
+                                style={{ backgroundColor: '#8B4513' }}
+                              >
+                                Kaldır
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center">
-                            <div className="w-40 h-32 border-2 border-dashed rounded-xl flex items-center justify-center" style={{ borderColor: '#FFB300', backgroundColor: '#FFF' }}>
-                              <FontAwesomeIcon icon={faImage} className="text-3xl" style={{ color: '#CCC' }} />
-                            </div>
-                            <p className="text-sm text-gray-500 mt-2">Fotoğraf yok</p>
+                            <label className="cursor-pointer">
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleImageSelect}
+                                className="hidden"
+                                disabled={loading}
+                              />
+                              <div className="w-40 h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center hover:bg-white transition-colors" style={{ borderColor: '#FFB300', backgroundColor: '#FFF' }}>
+                                <FontAwesomeIcon icon={faImage} className="text-3xl mb-2" style={{ color: '#FFB300' }} />
+                                <p className="text-sm font-semibold" style={{ color: '#8B4513' }}>Fotoğraf Ekle</p>
+                              </div>
+                            </label>
                           </div>
                         )}
                       </div>
@@ -404,6 +583,75 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
           </form>
         )}
       </div>
+
+      {/* Image Crop Modal */}
+      {showCropModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-5"
+          onClick={handleCropCancel}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b" style={{ borderColor: '#FFB300' }}>
+              <h2 className="text-2xl font-bold" style={{ color: '#8B4513' }}>
+                Resmi Kırp
+              </h2>
+              <button
+                onClick={handleCropCancel}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FontAwesomeIcon icon={faTimes} style={{ color: '#8B4513' }} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-gray-50">
+              <div className="w-full max-w-2xl">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={undefined}
+                >
+                  <img
+                    ref={imgRef}
+                    src={tempImageSrc}
+                    alt="Crop"
+                    className="max-w-full max-h-[60vh] object-contain"
+                  />
+                </ReactCrop>
+              </div>
+            </div>
+
+            <div className="flex gap-3 px-6 py-4 border-t rounded-b-3xl" style={{ borderColor: '#FFE082', backgroundColor: '#FFF8E1' }}>
+              <button
+                type="button"
+                onClick={handleCropCancel}
+                className="flex-1 py-2.5 rounded-xl border-2 bg-white font-semibold text-base transition-all hover:bg-gray-50"
+                style={{ borderColor: '#E0E0E0', color: '#8B4513' }}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={handleCropComplete}
+                disabled={!completedCrop}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-white text-base shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background: !completedCrop
+                    ? '#CCC'
+                    : 'linear-gradient(90deg, #FFB300 0%, #F57C00 100%)',
+                }}
+              >
+                <FontAwesomeIcon icon={faCrop} className="text-sm" />
+                <span className="whitespace-nowrap">Kırpmayı Onayla</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

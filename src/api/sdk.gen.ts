@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiBookDeleteByIdData, DeleteApiBookDeleteByIdErrors, DeleteApiBookDeleteByIdResponses, DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiBookGetData, GetApiBookGetResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiBookUpdateStatusByIdData, PatchApiBookUpdateStatusByIdErrors, PatchApiBookUpdateStatusByIdResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiBookCreateData, PostApiBookCreateErrors, PostApiBookCreateResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiBookUpdateByIdData, PutApiBookUpdateByIdErrors, PutApiBookUpdateByIdResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
+import type { DeleteApiBookDeleteByIdData, DeleteApiBookDeleteByIdErrors, DeleteApiBookDeleteByIdResponses, DeleteApiCategoryDeleteByIdData, DeleteApiCategoryDeleteByIdResponses, DeleteApiDowryDeleteByIdData, DeleteApiDowryDeleteByIdErrors, DeleteApiDowryDeleteByIdResponses, DeleteApiDowryImageByIdData, DeleteApiDowryImageByIdErrors, DeleteApiDowryImageByIdResponses, DeleteApiImageByIdData, DeleteApiImageByIdErrors, DeleteApiImageByIdResponses, GetApiAuthCheckAuthData, GetApiAuthCheckAuthErrors, GetApiAuthCheckAuthResponses, GetApiBookGetData, GetApiBookGetResponses, GetApiCategoryGetData, GetApiCategoryGetResponses, GetApiDowryGetByIdData, GetApiDowryGetByIdErrors, GetApiDowryGetByIdResponses, GetApiDowryGetData, GetApiDowryGetErrors, GetApiDowryGetResponses, GetApiImageByIdData, GetApiImageByIdErrors, GetApiImageByIdResponses, GetApiImageUserImagesData, GetApiImageUserImagesResponses, PatchApiBookUpdateStatusByIdData, PatchApiBookUpdateStatusByIdErrors, PatchApiBookUpdateStatusByIdResponses, PatchApiDowryImageByIdData, PatchApiDowryImageByIdErrors, PatchApiDowryImageByIdResponses, PatchApiDowryStatusByIdData, PatchApiDowryStatusByIdErrors, PatchApiDowryStatusByIdResponses, PostApiAuthChangePasswordData, PostApiAuthChangePasswordErrors, PostApiAuthChangePasswordResponses, PostApiAuthForgotPasswordData, PostApiAuthForgotPasswordErrors, PostApiAuthForgotPasswordResponses, PostApiAuthLoginData, PostApiAuthLoginErrors, PostApiAuthLoginResponses, PostApiAuthLogoutData, PostApiAuthLogoutResponses, PostApiAuthRefreshTokenData, PostApiAuthRefreshTokenErrors, PostApiAuthRefreshTokenResponses, PostApiAuthResetPasswordData, PostApiAuthResetPasswordErrors, PostApiAuthResetPasswordResponses, PostApiAuthSignupData, PostApiAuthSignupErrors, PostApiAuthSignupResponses, PostApiAuthVerifyEmailData, PostApiAuthVerifyEmailErrors, PostApiAuthVerifyEmailResponses, PostApiBookCreateData, PostApiBookCreateErrors, PostApiBookCreateResponses, PostApiCategoryAddData, PostApiCategoryAddErrors, PostApiCategoryAddResponses, PostApiDowryCreateData, PostApiDowryCreateErrors, PostApiDowryCreateResponses, PostApiImageOcrByIdData, PostApiImageOcrByIdErrors, PostApiImageOcrByIdResponses, PostApiImageUploadData, PostApiImageUploadErrors, PostApiImageUploadResponses, PutApiBookUpdateByIdData, PutApiBookUpdateByIdErrors, PutApiBookUpdateByIdResponses, PutApiDowryUpdateByIdData, PutApiDowryUpdateByIdErrors, PutApiDowryUpdateByIdResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -462,6 +462,46 @@ export const patchApiDowryStatusById = <ThrowOnError extends boolean = false>(op
             }
         ],
         url: '/api/dowry/status/{id}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Delete dowry image
+ * Delete the image of a specific dowry. The image will be removed from the database and the dowry's image reference will be cleared.
+ */
+export const deleteApiDowryImageById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiDowryImageByIdData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteApiDowryImageByIdResponses, DeleteApiDowryImageByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/dowry/image/{id}',
+        ...options
+    });
+};
+
+/**
+ * Update dowry image
+ * Update the image of a specific dowry. If a previous image exists, it will be deleted and replaced with the new one.
+ */
+export const patchApiDowryImageById = <ThrowOnError extends boolean = false>(options: Options<PatchApiDowryImageByIdData, ThrowOnError>) => {
+    return (options.client ?? client).patch<PatchApiDowryImageByIdResponses, PatchApiDowryImageByIdErrors, ThrowOnError>({
+        responseType: 'json',
+        security: [
+            {
+                scheme: 'bearer',
+                type: 'http'
+            }
+        ],
+        url: '/api/dowry/image/{id}',
         ...options,
         headers: {
             'Content-Type': 'application/json',

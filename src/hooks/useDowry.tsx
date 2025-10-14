@@ -363,6 +363,91 @@ export function useDowry() {
     }
   };
 
+  // Update dowry image
+  const updateDowryImage = async (dowryId: string, file: File): Promise<string | null> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // First upload the new image
+      const newImageId = await uploadImage(file);
+      if (!newImageId) {
+        throw new Error('Yeni resim yüklenemedi');
+      }
+
+      // Then update the dowry with the new image ID
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/dowry/image/${dowryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageId: newImageId
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return newImageId;
+      } else {
+        const errorMsg = data.message || 'Resim güncellenirken hata oluştu';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (err) {
+      console.error('Error updating dowry image:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Resim güncellenirken hata oluştu';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remove dowry image
+  const removeDowryImage = async (dowryId: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!dowryId) {
+        toast.error('Dowry ID bulunamadı');
+        return false;
+      }
+
+      // Delete the dowry image using dowry ID
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/dowry/image/${dowryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('Resim başarıyla silindi');
+        return true;
+      } else {
+        const errorMsg = data.message || 'Resim silinirken hata oluştu';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (err) {
+      console.error('Error removing dowry image:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Resim silinirken hata oluştu';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -376,6 +461,8 @@ export function useDowry() {
     getImage,
     updateDowry,
     getDowryById,
+    updateDowryImage,
+    removeDowryImage,
   };
 }
 

@@ -846,6 +846,87 @@ export type PatchApiDowryStatusByIdResponses = {
 
 export type PatchApiDowryStatusByIdResponse = PatchApiDowryStatusByIdResponses[keyof PatchApiDowryStatusByIdResponses];
 
+export type DeleteApiDowryImageByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Dowry ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/dowry/image/{id}';
+};
+
+export type DeleteApiDowryImageByIdErrors = {
+    /**
+     * Dowry not found or has no image to delete
+     */
+    404: _Error;
+    /**
+     * Error deleting image from database
+     */
+    500: _Error;
+};
+
+export type DeleteApiDowryImageByIdError = DeleteApiDowryImageByIdErrors[keyof DeleteApiDowryImageByIdErrors];
+
+export type DeleteApiDowryImageByIdResponses = {
+    /**
+     * Dowry image deleted successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        dowry?: Dowry;
+    };
+};
+
+export type DeleteApiDowryImageByIdResponse = DeleteApiDowryImageByIdResponses[keyof DeleteApiDowryImageByIdResponses];
+
+export type PatchApiDowryImageByIdData = {
+    body: {
+        /**
+         * Image ID from uploaded image
+         */
+        imageId: string;
+    };
+    path: {
+        /**
+         * Dowry ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/dowry/image/{id}';
+};
+
+export type PatchApiDowryImageByIdErrors = {
+    /**
+     * Bad request - Invalid or missing imageId
+     */
+    400: _Error;
+    /**
+     * Dowry not found
+     */
+    404: _Error;
+};
+
+export type PatchApiDowryImageByIdError = PatchApiDowryImageByIdErrors[keyof PatchApiDowryImageByIdErrors];
+
+export type PatchApiDowryImageByIdResponses = {
+    /**
+     * Dowry image updated successfully
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        dowry?: Dowry;
+    };
+};
+
+export type PatchApiDowryImageByIdResponse = PatchApiDowryImageByIdResponses[keyof PatchApiDowryImageByIdResponses];
+
 export type DeleteApiDowryDeleteByIdData = {
     body?: never;
     path: {
