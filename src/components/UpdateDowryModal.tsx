@@ -11,6 +11,7 @@ import {
   faWallet,
   faMapMarkerAlt,
   faCrop,
+  faLink,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
@@ -40,6 +41,7 @@ interface DowryItem {
   imageId?: string;
   dowryImage?: string;
   isRead?: boolean;
+  url?: string;
 }
 
 interface UpdateDowryModalProps {
@@ -60,6 +62,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
     description: '',
     dowryPrice: '',
     dowryLocation: '',
+    url:'',
     status: 'not_purchased' as 'purchased' | 'not_purchased'
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
         description: item.description || '',
         dowryPrice: item.dowryPrice?.toString() || '',
         dowryLocation: item.dowryLocation || '',
+        url: item.url || '',
         status: item.status || 'not_purchased'
       });
       
@@ -298,6 +302,7 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
             description: formData.description.trim() || undefined,
             dowryPrice: formData.dowryPrice.trim() ? parseFloat(formData.dowryPrice) : 0,
             dowryLocation: formData.dowryLocation.trim() || undefined,
+            url: formData.url.trim() || undefined,
             status: formData.status,
           };
           await updateDowry(item._id, dowryData);
@@ -517,6 +522,19 @@ export default function UpdateDowryModal({ visible, onClose, onSuccess, item, ca
                         onChange={(e) => handleInputChange('dowryLocation', e.target.value)}
                         placeholder="Örn: İstanbul, Türkiye"
                         leftIcon={<FontAwesomeIcon icon={faMapMarkerAlt} />}
+                        disabled={loading}
+                        focusBackground={true}
+                        size="md"
+                      />
+                    )}
+                       {!isBookCategory && (
+                      <Input
+                        label="URL"
+                        type="text"
+                        value={formData.url}
+                        onChange={(e) => handleInputChange('url', e.target.value)}
+                        placeholder="Örn: https://www.google.com"
+                        leftIcon={<FontAwesomeIcon icon={faLink} />}
                         disabled={loading}
                         focusBackground={true}
                         size="md"

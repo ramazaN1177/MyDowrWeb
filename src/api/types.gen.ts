@@ -636,6 +636,10 @@ export type PostApiDowryCreateData = {
          */
         imageId?: string;
         dowryLocation?: string;
+        /**
+         * Valid URL format required (e.g., https://example.com)
+         */
+        url?: string;
         status?: 'purchased' | 'not_purchased';
     };
     path?: never;
@@ -772,6 +776,10 @@ export type PutApiDowryUpdateByIdData = {
          */
         imageId?: string;
         dowryLocation?: string;
+        /**
+         * Valid URL format required (e.g., https://example.com)
+         */
+        url?: string;
         status?: 'purchased' | 'not_purchased';
     };
     path: {

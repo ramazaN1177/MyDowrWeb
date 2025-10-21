@@ -51,6 +51,7 @@ import {
   faSortAmountDown,
   faSortAmountUp,
   faChevronDown,
+  faLink,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
@@ -72,7 +73,8 @@ interface DowryItem {
   dowryLocation?: string;
   status: 'purchased' | 'not_purchased';
   isRead?: boolean;
-}
+  url?: string;
+};
 
 const Category = () => {
   const [searchParams] = useSearchParams();
@@ -931,6 +933,30 @@ const Category = () => {
                       <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
                         Konum: {item.dowryLocation}
                       </span>
+                    </div>
+                  )}
+                  {item.url && (
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => window.open(item.url, '_blank')}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200"
+                        style={{ 
+                          color: '#8B4513',
+                          borderColor: '#FFB300',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#FFB300';
+                          e.currentTarget.style.backgroundColor = '#FFF8E1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#8B4513';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faLink} className="text-xs" />
+                        <span>Linke Git</span>
+                      </button>
                     </div>
                   )}
                 </div>

@@ -41,6 +41,7 @@ import {
   faWallet,
   faMapMarkerAlt,
   faCrop,
+  faLink,
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { useDowry } from '../hooks/useDowry';
@@ -110,6 +111,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
     description: '',
     dowryPrice: '',
     dowryLocation: '',
+    url: '',
     status: 'not_purchased' as 'purchased' | 'not_purchased'
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -145,6 +147,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
         description: '',
         dowryPrice: '',
         dowryLocation: '',
+        url: '',
         status: 'not_purchased'
       });
       setSelectedImage(null);
@@ -336,6 +339,7 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
         dowryPrice: price,
         imageId: imageId || undefined,
         dowryLocation: formData.dowryLocation.trim() || undefined,
+        url: formData.url.trim() || undefined,
         status: formData.status
       };
 
@@ -604,7 +608,17 @@ export default function AddDowryModal({ visible, onClose, onSuccess, category, c
                   focusBackground={true}
                   size="md"
                 />
-
+                <Input
+                  label="URL"
+                  type="text"
+                  value={formData.url}
+                  onChange={(e) => handleInputChange('url', e.target.value)}
+                  placeholder="Örn: https://www.google.com"
+                  leftIcon={<FontAwesomeIcon icon={faLink} />}
+                  disabled={loading}
+                  focusBackground={true}
+                  size="md"
+                />
                 <div className="mb-4">
                   <label className="block text-sm font-bold mb-2" style={{ color: '#8B4513' }}>
                     Durum

@@ -164,11 +164,6 @@ const Home = () => {
     setCurrentPage(1);
   };
 
-  const handleDowryAdded = () => {
-    // Refresh categories if needed
-    toast.success('Eşya başarıyla eklendi');
-  };
-
   const navigateToCategory = (category: { id: string; title: string; color: string }) => {
     // URL query parameters kullanarak navigate et
     const params = new URLSearchParams({
@@ -431,7 +426,7 @@ const Home = () => {
       <AddDowryModal
         visible={showAddDowryModal}
         onClose={() => setShowAddDowryModal(false)}
-        onSuccess={handleDowryAdded}
+        onSuccess={()=>{fetchCategories();}}
         category="select"
         categories={categories}
       />
